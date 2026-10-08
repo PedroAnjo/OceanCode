@@ -1,0 +1,19 @@
+from pathlib import Path
+WIDTH, HEIGHT = 1280, 720
+FPS = 60
+TITLE = "OceanCode — Expedição Oceânica"
+WHITE = (255, 255, 255)
+BLUE = (24, 105, 211)
+NAVY = (24, 46, 78)
+MUTED = (105, 123, 145)
+PALE = (239, 245, 252)
+GRAY = (195, 204, 216)
+BORDER = (220, 230, 241)
+RADIUS = 16
+FONT_NAME = "segoeui"
+FONT_SMALL, FONT_BODY, FONT_HEADING, FONT_TITLE = 18, 24, 34, 72
+MAX_COMMANDS = 12
+BOARD_RECT = (48, 116, 864, 384)
+BOARD_COLS, BOARD_ROWS = 8, 6
+OCEAN_TOP, OCEAN_BOTTOM = (30, 151, 197), (12, 63, 119)
+BACKGROUND_IMAGE = Path(__file__).parent / "assets/images/tabuleiro_oceano.png"
