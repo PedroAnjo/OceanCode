@@ -1,69 +1,87 @@
 import pygame
 from .. import config as c
-from ..views.components.button import font
-from ..models.game_state import GameState
-from ..views.start_view import StartView
-from ..views.mission_view import MissionView
-from ..views.level_view import LevelView
-from ..views.game_view import GameView
-from .navigation_controller import NavigationController
-from .game_controller import GameController
+from ..views.components.button import fonte
+from ..models.game_state import EstadoJogo
+from ..views.start_view import ViewInicio
+from ..views.mission_view import ViewMissoes
+from ..views.level_view import ViewDesafios
+from ..views.game_view import ViewJogo
+from ..views.result_view import ViewRetorno
+from .navigation_controller import ControladorNavegacao
+from .game_controller import ControladorJogo
 
-class AppController:
+class ControladorAplicacao:
     def __init__(self):
         pygame.display.init()
         pygame.font.init()
-        font.cache_clear()
-        self.surface = pygame.display.set_mode((c.WIDTH, c.HEIGHT))
-        pygame.display.set_caption(c.TITLE)
-        self.clock = pygame.time.Clock()
-        self.state = GameState()
-        self.navigation = NavigationController(self.state)
-        self.game = GameController(self.state)
-        self.views = {"start": StartView(), "missions": MissionView(), "levels": LevelView(), "game": GameView()}
-        self.running = True
-        self.draw()
+        fonte.cache_clear()
+        self.superficie = pygame.display.set_mode((c.LARGURA,c.ALTURA))
+        pygame.display.set_caption(c.TITULO)
+        self.relogio = pygame.time.Clock()
+        self.estado = EstadoJogo()
+        self.navegacao = ControladorNavegacao(self.estado)
+        self.jogo = ControladorJogo(self.estado)
+        self.telas = {'inicio':ViewInicio(),'missoes':ViewMissoes(),'desafios':ViewDesafios(),
+                      'jogo':ViewJogo(),'retorno':ViewRetorno()}
+        self.em_execucao = True
+        self.desenhar()
 
-    def dispatch(self, action):
-        kind, *args = action
-        if kind == "quit":
-            self.running = False
-        elif kind == "play":
-            self.navigation.active = "missions"
-        elif kind == "back":
-            self.navigation.back()
-        elif kind == "music":
-            self.state.music_enabled = not self.state.music_enabled
-        elif kind == "mission":
-            self.navigation.mission(args[0])
-        elif kind == "level":
-            self.navigation.level(args[0])
-        else:
-            self.game.handle(action)
+    def tratar_acao(self, acao):
+        tipo,*argumentos = acao
+        if tipo == 'sair':
+            self.em_execucao = False
+        elif tipo == 'jogar':
+            self.navegacao.ativa = 'missoes'
+        elif tipo == 'voltar':
+            self.navegacao.voltar()
+        elif tipo == 'musica':
+            self.estado.musica_ativada = not self.estado.musica_ativada
+        elif tipo == 'missao':
+            self.navegacao.selecionar_missao(argumentos[0])
+        elif tipo == 'desafio':
+            self.navegacao.selecionar_desafio(argumentos[0])
+        elif tipo == 'tentar_novamente' and self.navegacao.ativa == 'retorno':
+            self.navegacao.tentar_novamente()
+        elif tipo == 'menu_desafios':
+            self.estado.executando = False
+            self.navegacao.ativa = 'desafios'
+        elif tipo == 'proximo' and self.navegacao.ativa == 'retorno':
+            proximo = self.jogo.proximo_desafio()
+            if proximo:
+                self.navegacao.selecionar_desafio(proximo.numero)
+        elif self.navegacao.ativa == 'jogo':
+            self.jogo.tratar_acao(acao)
 
-    def handle_event(self, event):
-        if event.type == pygame.QUIT:
-            self.running = False
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.navigation.back()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for button in self.views[self.navigation.active].buttons:
-                if button.hit(event.pos):
-                    self.dispatch(button.action)
+    def tratar_evento(self, evento):
+        if evento.type == pygame.QUIT:
+            self.em_execucao = False
+        elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            self.navegacao.voltar()
+            self.desenhar()
+        elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            for botao in self.telas[self.navegacao.ativa].botoes:
+                if botao.contem(evento.pos):
+                    self.tratar_acao(botao.acao)
                     break
-            self.draw()  # Refresh click targets even when several events arrive together.
+            self.desenhar()
 
-    def draw(self):
-        self.surface.fill(c.WHITE)
-        self.views[self.navigation.active].draw(self.surface, self.state, pygame.mouse.get_pos())
+    def atualizar(self, tempo_decorrido):
+        if self.navegacao.ativa == 'jogo':
+            self.jogo.atualizar(tempo_decorrido)
+            if self.estado.tipo_resultado:
+                self.navegacao.ativa = 'retorno'
 
-    def run(self):
+    def desenhar(self):
+        self.telas[self.navegacao.ativa].desenhar(self.superficie,self.estado,pygame.mouse.get_pos())
+
+    def executar(self):
         try:
-            while self.running:
-                for event in pygame.event.get():
-                    self.handle_event(event)
-                self.draw()
+            while self.em_execucao:
+                tempo_decorrido = self.relogio.tick(c.FPS)/1000
+                for evento in pygame.event.get():
+                    self.tratar_evento(evento)
+                self.atualizar(tempo_decorrido)
+                self.desenhar()
                 pygame.display.flip()
-                self.clock.tick(c.FPS)
         finally:
             pygame.quit()

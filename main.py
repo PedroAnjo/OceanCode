@@ -1,4 +1,4 @@
-from oceancode.main import main
+﻿from oceancode.main import principal
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    principal()

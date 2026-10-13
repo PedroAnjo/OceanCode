@@ -1,23 +1,28 @@
-class NavigationController:
-    def __init__(self, state):
-        self.state = state
-        self.active = "start"
+﻿class ControladorNavegacao:
+    def __init__(self, estado):
+        self.estado = estado
+        self.ativa = 'inicio'
 
-    def back(self):
-        self.active = {"missions": "start", "levels": "missions", "game": "levels"}.get(self.active, "start")
+    def voltar(self):
+        self.estado.executando = False
+        self.ativa = {'missoes': 'inicio', 'desafios': 'missoes',
+                      'jogo': 'desafios', 'retorno': 'desafios'}.get(self.ativa, 'inicio')
 
-    def mission(self, number):
-        mission = next((m for m in self.state.missions if m.number == number), None)
-        if mission and mission.available:
-            self.state.selected_mission = mission
-            self.state.selected_level = None
-            self.active = "levels"
+    def selecionar_missao(self, numero):
+        missao = next((missao for missao in self.estado.missoes if missao.numero == numero), None)
+        if missao and missao.disponivel:
+            self.estado.missao_selecionada = missao
+            self.estado.desafio_selecionado = None
+            self.ativa = 'desafios'
 
-    def level(self, number):
-        mission = self.state.selected_mission
-        level = next((l for l in mission.levels if l.number == number), None) if mission else None
-        if level and level.playable:
-            self.state.selected_level = level
-            self.state.commands.clear()
-            self.state.message = "Adicione comandos para planejar sua rota."
-            self.active = "game"
+    def selecionar_desafio(self, numero):
+        missao = self.estado.missao_selecionada
+        desafio = next((desafio for desafio in missao.desafios if desafio.numero == numero), None) if missao else None
+        if desafio and desafio.jogavel:
+            self.estado.desafio_selecionado = desafio
+            self.estado.reiniciar_desafio()
+            self.ativa = 'jogo'
+
+    def tentar_novamente(self):
+        self.estado.reiniciar_desafio(preservar_comandos=True)
+        self.ativa = 'jogo'

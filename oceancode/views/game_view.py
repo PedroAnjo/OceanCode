@@ -1,66 +1,83 @@
-import pygame
-from .base_view import BaseView
-from .components.button import Button, text, panel
+﻿import pygame
+from .base_view import ViewBase
+from .components.button import Botao, texto, painel
+from .components.ocean_background import FundoOceanico
 from .. import config as c
 
-class GameView(BaseView):
+class ViewJogo(ViewBase):
     def __init__(self):
         super().__init__()
-        self.background = None
-        if c.BACKGROUND_IMAGE.is_file():
-            try:
-                self.background = pygame.image.load(str(c.BACKGROUND_IMAGE)).convert()
-            except pygame.error:
-                pass
+        self.fundo_tabuleiro = FundoOceanico(pygame.Rect(c.RETANGULO_TABULEIRO).size, c.IMAGEM_FUNDO)
+        self.imagens = {}
+        for tipo in ('submarino','barreira','objetivo'):
+            caminho = c.PASTA_IMAGENS / f'{tipo}.png'
+            if caminho.is_file():
+                try:
+                    self.imagens[tipo] = pygame.image.load(str(caminho)).convert_alpha()
+                except (pygame.error, OSError):
+                    pass
 
-    def board(self, surface):
-        r = pygame.Rect(c.BOARD_RECT)
-        if self.background is not None:
-            surface.blit(pygame.transform.smoothscale(self.background, r.size), r)
+    def desenhar_sprite(self, superficie, tipo, centro, tamanho):
+        if tipo in self.imagens:
+            imagem = self.imagens[tipo]
+            proporcao = min(tamanho[0]/imagem.get_width(), tamanho[1]/imagem.get_height())
+            imagem = pygame.transform.smoothscale(imagem, (max(1,int(imagem.get_width()*proporcao)),max(1,int(imagem.get_height()*proporcao))))
+            superficie.blit(imagem, imagem.get_rect(center=centro))
+            return
+        x,y = centro
+        if tipo == 'barreira':
+            pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x-32,y+21),(x-23,y-12),(x+5,y-24),(x+30,y+2),(x+34,y+21)])
+            pygame.draw.line(superficie, c.BORDA, (x-20,y-5), (x+3,y-16), 4)
+        elif tipo == 'submarino':
+            pygame.draw.polygon(superficie, c.AMARELO, [(x-25,y),(x-43,y-16),(x-43,y+16)])
+            pygame.draw.ellipse(superficie, c.AMARELO, (x-33,y-18,72,36))
+            pygame.draw.circle(superficie, c.AZUL_ESCURO, (x+12,y), 10)
+            pygame.draw.circle(superficie, c.SUAVE, (x+14,y-3), 4)
+            pygame.draw.lines(superficie, c.AMARELO, False, [(x,y-18),(x,y-29),(x+15,y-29)],6)
         else:
-            for row in range(r.height):
-                t = row / r.height
-                color = tuple(int(a + (b - a) * t) for a, b in zip(c.OCEAN_TOP, c.OCEAN_BOTTOM))
-                pygame.draw.line(surface, color, (r.x, r.y + row), (r.right - 1, r.y + row))
-            for x, y in [(90, 180), (560, 230), (760, 410), (370, 445)]:
-                pygame.draw.circle(surface, (82, 181, 211), (x, y), 10, 2)
-        cw, ch = r.width // c.BOARD_COLS, r.height // c.BOARD_ROWS
-        for col in range(c.BOARD_COLS + 1):
-            pygame.draw.line(surface, (83, 162, 198), (r.x + col * cw, r.y), (r.x + col * cw, r.bottom))
-        for row in range(c.BOARD_ROWS + 1):
-            pygame.draw.line(surface, (83, 162, 198), (r.x, r.y + row * ch), (r.right, r.y + row * ch))
-        def cell(col, row):
-            return r.x + col * cw + cw // 2, r.y + row * ch + ch // 2
-        for col, row in [(3, 1), (4, 3), (2, 4), (6, 2)]:
-            x, y = cell(col, row)
-            pygame.draw.polygon(surface, (70, 94, 114), [(x-32,y+21), (x-23,y-12), (x+5,y-24), (x+30,y+2), (x+34,y+21)])
-        x, y = cell(0, 3)
-        pygame.draw.polygon(surface, (235, 171, 45), [(x-25,y), (x-43,y-16), (x-43,y+16)])
-        pygame.draw.ellipse(surface, (255, 207, 75), (x-33,y-18,72,36))
-        pygame.draw.circle(surface, (31, 96, 140), (x+12,y), 10)
-        pygame.draw.lines(surface, (255, 207, 75), False, [(x,y-18),(x,y-29),(x+15,y-29)], 6)
-        x, y = cell(7, 0)
-        pygame.draw.circle(surface, (105, 231, 188), (x,y), 22, 3)
-        pygame.draw.polygon(surface, (105, 231, 188), [(x,y-15),(x+12,y),(x,y+15),(x-12,y)])
+            pygame.draw.circle(superficie, c.BRANCO, (x,y),22,3)
+            pygame.draw.polygon(superficie, c.AMARELO, [(x,y-15),(x+12,y),(x,y+15),(x-12,y)])
 
-    def draw(self, surface, state, mouse):
-        self.header(surface, f"{state.selected_mission.name}  /  Fase {state.selected_level.number}", "Protótipo visual • Submarino e obstáculos demonstrativos")
-        self.board(surface)
-        panel(surface, (936, 116, 296, 384))
-        text(surface, "COMANDOS", (1084, 145), 24, c.NAVY, True)
-        self.buttons = [Button((988, 180 + i * 76, 192, 60), "", ("command", d), direction=d)
-                        for i, d in enumerate(("up", "down", "left", "right"))]
-        panel(surface, (48, 520, 1184, 188))
-        text(surface, "ÁREA DE PROGRAMAÇÃO", (72, 535), 22)
-        text(surface, f"{len(state.commands)}/{c.MAX_COMMANDS} • Clique em uma seta para removê-la", (690, 537), 18, c.MUTED)
-        for i in range(c.MAX_COMMANDS):
-            rect = (72 + i * 67, 575, 56, 50)
-            if i < len(state.commands):
-                self.buttons.append(Button(rect, "", ("remove", i), direction=state.commands[i]))
+    def tabuleiro(self, superficie, estado):
+        retangulo = pygame.Rect(c.RETANGULO_TABULEIRO)
+        painel(superficie, retangulo.inflate(8,8), c.BORDA)
+        self.fundo_tabuleiro.desenhar(superficie, retangulo.topleft)
+        largura_celula, altura_celula = retangulo.width//c.COLUNAS, retangulo.height//c.LINHAS
+        for coluna in range(c.COLUNAS+1):
+            pygame.draw.line(superficie,c.BORDA,(retangulo.x+coluna*largura_celula,retangulo.y),(retangulo.x+coluna*largura_celula,retangulo.bottom))
+        for linha in range(c.LINHAS+1):
+            pygame.draw.line(superficie,c.BORDA,(retangulo.x,retangulo.y+linha*altura_celula),(retangulo.right,retangulo.y+linha*altura_celula))
+        def centro(posicao):
+            coluna,linha = posicao
+            return retangulo.x+coluna*largura_celula+largura_celula//2,retangulo.y+linha*altura_celula+altura_celula//2
+        for posicao in estado.desafio_selecionado.obstaculos:
+            self.desenhar_sprite(superficie,'barreira',centro(posicao),(72,54))
+        self.desenhar_sprite(superficie,'objetivo',centro(estado.desafio_selecionado.posicao_objetivo),(48,48))
+        self.desenhar_sprite(superficie,'submarino',centro(estado.posicao_submarino),(84,58))
+
+    def desenhar(self, superficie, estado, posicao_mouse):
+        self.iniciar(superficie)
+        desafio = estado.desafio_selecionado
+        self.cabecalho(superficie, f'Desafio {desafio.numero} — {desafio.nome}', desafio.objetivo)
+        self.hud(superficie,estado)
+        self.tabuleiro(superficie,estado)
+        painel(superficie,c.RETANGULO_PAINEL_COMANDOS)
+        texto(superficie,'COMANDOS',(1084,145),24,centralizado=True)
+        self.botoes = [Botao((988,180+indice*76,192,60),'',('comando',direcao),not estado.executando,direcao)
+                       for indice,direcao in enumerate(('cima','baixo','esquerda','direita'))]
+        painel(superficie,c.RETANGULO_PROGRAMACAO)
+        texto(superficie,'ÁREA DE PROGRAMAÇÃO',(72,533),22)
+        texto(superficie,f'{len(estado.comandos)}/{desafio.limite_comandos} • Clique para remover',(540,536),18)
+        for indice in range(desafio.limite_comandos):
+            retangulo = pygame.Rect(c.ORIGEM_SLOTS[0]+indice*c.ESPACAMENTO_SLOTS,
+                                    c.ORIGEM_SLOTS[1],*c.TAMANHO_SLOT)
+            if indice < len(estado.comandos):
+                self.botoes.append(Botao(retangulo,'',('remover',indice),not estado.executando,estado.comandos[indice]))
+                if estado.executando and indice == estado.indice_comando:
+                    pygame.draw.rect(superficie,c.AZUL_ESCURO,retangulo.inflate(8,8),3,border_radius=12)
             else:
-                pygame.draw.rect(surface, c.BORDER, rect, 2, border_radius=10)
-        self.buttons += [Button((928, 575, 140, 50), "Executar", ("execute",)),
-                         Button((1080, 575, 128, 50), "Limpar", ("clear",)),
-                         Button((72, 647, 116, 40), "Voltar", ("back",))]
-        text(surface, state.message, (212, 657), 18, c.MUTED)
-        self.draw_buttons(surface, mouse)
+                pygame.draw.rect(superficie,c.BORDA,retangulo,2,border_radius=10)
+        self.botoes += [Botao(c.RETANGULO_EXECUTAR,'Executar',('executar',),not estado.executando),
+                        Botao(c.RETANGULO_LIMPAR,'Limpar',('limpar',),not estado.executando)]
+        texto(superficie,estado.mensagem,(48,662),18)
+        self.finalizar(superficie,estado,posicao_mouse)

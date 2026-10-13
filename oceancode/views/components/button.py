@@ -1,41 +1,55 @@
-from functools import lru_cache
+﻿from functools import lru_cache
 import pygame
 from ... import config as c
 
-@lru_cache(maxsize=16)
-def font(size):
-    return pygame.font.SysFont(c.FONT_NAME, size)
+@lru_cache(maxsize=32)
+def fonte(tamanho):
+    return pygame.font.SysFont(c.NOME_FONTE, tamanho)
 
-def text(surface, label, position, size=c.FONT_BODY, color=c.NAVY, center=False):
-    rendered = font(size).render(str(label), True, color)
-    rect = rendered.get_rect(center=position) if center else rendered.get_rect(topleft=position)
-    surface.blit(rendered, rect)
+def texto(superficie, rotulo, posicao, tamanho=c.FONTE_CORPO, cor=c.AZUL_ESCURO, centralizado=False):
+    desenho = fonte(tamanho).render(str(rotulo), True, cor)
+    retangulo = desenho.get_rect(center=posicao) if centralizado else desenho.get_rect(topleft=posicao)
+    superficie.blit(desenho, retangulo)
 
-def panel(surface, rect, color=c.PALE):
-    pygame.draw.rect(surface, color, rect, border_radius=c.RADIUS)
+def painel(superficie, retangulo, cor=c.SUAVE):
+    retangulo = pygame.Rect(retangulo)
+    pygame.draw.rect(superficie, c.BORDA, retangulo.move(0, 4), border_radius=c.RAIO)
+    pygame.draw.rect(superficie, cor, retangulo, border_radius=c.RAIO)
 
-def arrow(surface, direction, center, color=c.WHITE):
-    x, y = center
-    points = [(0, -15), (-11, -3), (-4, -3), (-4, 14), (4, 14), (4, -3), (11, -3)]
-    rotations = {"up": 0, "right": 1, "down": 2, "left": 3}
-    for _ in range(rotations[direction]):
-        points = [(-py, px) for px, py in points]
-    pygame.draw.polygon(surface, color, [(x + px, y + py) for px, py in points])
+def seta(superficie, direcao, centro, cor=c.AZUL_ESCURO):
+    x, y = centro
+    pontos = [(0, -15), (-11, -3), (-4, -3), (-4, 14), (4, 14), (4, -3), (11, -3)]
+    for _ in range({'cima': 0, 'direita': 1, 'baixo': 2, 'esquerda': 3}[direcao]):
+        pontos = [(-py, px) for px, py in pontos]
+    pygame.draw.polygon(superficie, cor, [(x + px, y + py) for px, py in pontos])
 
-class Button:
-    def __init__(self, rect, label, action, enabled=True, direction=None):
-        self.rect = pygame.Rect(rect)
-        self.label, self.action, self.enabled, self.direction = label, action, enabled, direction
+class Botao:
+    def __init__(self, retangulo, rotulo, acao, habilitado=True, direcao=None, icone=None):
+        self.retangulo = pygame.Rect(retangulo)
+        self.rotulo, self.acao = rotulo, acao
+        self.habilitado, self.direcao, self.icone = habilitado, direcao, icone
 
-    def draw(self, surface, mouse):
-        color = c.BLUE if self.enabled else c.GRAY
-        if self.enabled and self.rect.collidepoint(mouse):
-            color = (18, 82, 173)
-        panel(surface, self.rect, color)
-        if self.direction:
-            arrow(surface, self.direction, self.rect.center)
+    def desenhar(self, superficie, posicao_mouse):
+        cor = c.AMARELO if self.habilitado else c.CINZA
+        if self.habilitado and self.retangulo.collidepoint(posicao_mouse):
+            cor = c.AMARELO_PRESSIONADO if pygame.mouse.get_pressed()[0] else c.AMARELO_HOVER
+        if self.icone:
+            pygame.draw.circle(superficie, cor, self.retangulo.center, self.retangulo.width // 2)
+            x, y = self.retangulo.center
+            pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x-12,y-6),(x-6,y-6),(x+2,y-12),(x+2,y+12),(x-6,y+6),(x-12,y+6)])
+            if self.icone == 'som_ligado':
+                pygame.draw.arc(superficie, c.AZUL_ESCURO, (x-7,y-13,22,26), -1.1, 1.1, 2)
+            else:
+                pygame.draw.line(superficie, c.AZUL_ESCURO, (x+6,y-7), (x+15,y+7), 3)
+                pygame.draw.line(superficie, c.AZUL_ESCURO, (x+6,y+7), (x+15,y-7), 3)
         else:
-            text(surface, self.label, self.rect.center, color=c.WHITE, center=True)
+            painel(superficie, self.retangulo, cor)
+            if self.direcao:
+                seta(superficie, self.direcao, self.retangulo.center)
+            else:
+                texto(superficie, self.rotulo, self.retangulo.center, centralizado=True)
 
-    def hit(self, position):
-        return self.enabled and self.rect.collidepoint(position)
+    def contem(self, posicao):
+        if self.icone:
+            return self.habilitado and pygame.Vector2(posicao).distance_to(self.retangulo.center) <= self.retangulo.width / 2
+        return self.habilitado and self.retangulo.collidepoint(posicao)

@@ -1,12 +1,14 @@
-from .base_view import BaseView
-from .components.button import text
-from .components.mission_card import MissionCard
-from .. import config as c
+﻿from .base_view import ViewBase
+from .components.button import painel, texto
+from .components.mission_card import PastaMissao
 
-class MissionView(BaseView):
-    def draw(self, surface, state, mouse):
-        self.header(surface, "Escolha uma missão para iniciar sua expedição.", "Aprenda lógica de programação explorando cada missão.")
-        text(surface, f"XP: {state.xp}   •   Nível: {state.player_level}", (935, 88), 20, c.BLUE)
-        self.buttons = [MissionCard((48 + (i % 2) * 604, 160 + (i // 2) * 240, 580, 215), m)
-                        for i, m in enumerate(state.missions)] + [self.back()]
-        self.draw_buttons(surface, mouse)
+class ViewMissoes(ViewBase):
+    def desenhar(self, superficie, estado, posicao_mouse):
+        self.iniciar(superficie)
+        painel(superficie, (24,108,1232,522))
+        self.cabecalho(superficie, 'Painel de expedições', 'Escolha uma missão para explorar e aprender.')
+        self.hud(superficie, estado)
+        self.botoes = [PastaMissao((48+(indice%2)*604,160+(indice//2)*240,580,205),missao)
+                       for indice,missao in enumerate(estado.missoes)]
+        texto(superficie, 'OCEANCODE  /  CONTROLE DE MISSÕES', (48,651), 18)
+        self.finalizar(superficie, estado, posicao_mouse)

@@ -1,13 +1,14 @@
-from .base_view import BaseView
-from .components.button import text
-from .components.level_button import LevelButton
-from .. import config as c
+﻿from .base_view import ViewBase
+from .components.button import texto
+from .components.level_button import BotaoDesafio
 
-class LevelView(BaseView):
-    def draw(self, surface, state, mouse):
-        m = state.selected_mission
-        self.header(surface, f"Missão {m.number} — {m.name}", f"Conteúdo: {m.content}  •  Escolha uma fase para explorar.")
-        self.buttons = [LevelButton((190 + (i % 5) * 190, 210 + (i // 5) * 180, 140, 110), level)
-                        for i, level in enumerate(m.levels)] + [self.back()]
-        text(surface, "OK: concluída   •   Azul: disponível   •   Cinza: bloqueada", (640, 570), 20, c.MUTED, True)
-        self.draw_buttons(surface, mouse)
+class ViewDesafios(ViewBase):
+    def desenhar(self, superficie, estado, posicao_mouse):
+        self.iniciar(superficie)
+        missao = estado.missao_selecionada
+        self.cabecalho(superficie, f'Missão {missao.numero} — {missao.nome}', f'Conteúdo: {missao.conteudo}')
+        self.botoes = [BotaoDesafio((190+(indice%5)*190,210+(indice//5)*180,140,110),desafio)
+                       for indice,desafio in enumerate(missao.desafios)]
+        texto(superficie, '✓ Concluído   •   Amarelo: disponível   •   Cinza: bloqueado', (640,570),20,centralizado=True)
+        texto(superficie, 'Nesta expedição, os desafios 1 a 3 podem ser desbloqueados.', (640,610),18,centralizado=True)
+        self.finalizar(superficie, estado, posicao_mouse)

@@ -1,7 +1,7 @@
-from .controllers.app_controller import AppController
+﻿from .controllers.app_controller import ControladorAplicacao
 
-def main():
-    AppController().run()
+def principal():
+    ControladorAplicacao().executar()
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    principal()

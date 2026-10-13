@@ -1,12 +1,12 @@
-from .base_view import BaseView
-from .components.button import Button, text
+﻿from .base_view import ViewBase
+from .components.button import Botao, texto
 from .. import config as c
 
-class StartView(BaseView):
-    def draw(self, surface, state, mouse):
-        text(surface, "OceanCode", (640, 205), c.FONT_TITLE, c.BLUE, True)
-        text(surface, "Expedição Oceânica", (640, 278), 30, c.MUTED, True)
-        self.buttons = [Button((500, 360, 280, 58), "Jogar", ("play",)),
-                        Button((500, 446, 280, 58), "Sair", ("quit",)),
-                        Button((1030, 636, 202, 48), "Música: " + ("ligada" if state.music_enabled else "desligada"), ("music",))]
-        self.draw_buttons(surface, mouse)
+class ViewInicio(ViewBase):
+    def desenhar(self, superficie, estado, posicao_mouse):
+        self.iniciar(superficie)
+        texto(superficie, 'OceanCode', (640,205), c.FONTE_TITULO, centralizado=True)
+        texto(superficie, 'Expedição Oceânica', (640,278), 30, centralizado=True)
+        self.botoes = [Botao((500,360,280,58), 'JOGAR', ('jogar',)),
+                       Botao((500,446,280,58), 'SAIR', ('sair',))]
+        self.finalizar(superficie, estado, posicao_mouse, voltar=False)

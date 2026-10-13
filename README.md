@@ -1,72 +1,122 @@
-# OceanCode — Expedição Oceânica
+﻿# OceanCode — Expedição Oceânica
 
-Projeto da disciplina de IHM focado no ensino de lógica de programação.
-Protótipo desktop navegável em Python e Pygame, com janela de 1280 × 720.
+Jogo educacional desktop de sequências e lógica de programação, desenvolvido
+com Python e Pygame. Interface em azul e amarelo pastel, com janela fixa de
+1280 × 720. O progresso existe somente durante a sessão.
 
 ## Executar
 
-Requer Python 3.13 e Pygame 2.6.1. Na raiz do repositório:
+O ambiente existente utiliza Python 3.13 e Pygame 2.6.1. Na raiz:
+
+```powershell
+.\.venv313\Scripts\python.exe main.py
+```
+
+Com o ambiente virtual ativado, também é possível executar `python main.py`
+ou `python -m oceancode.main`. No editor, selecione
+`.venv313\Scripts\python.exe` como interpretador.
+
+Para preparar outro ambiente:
 
 ```powershell
 py -3.13 -m venv .venv313
-.\.venv313\Scripts\python -m pip install -r requirements.txt
-.\.venv313\Scripts\python main.py
+.\.venv313\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Se o ambiente já estiver instalado, execute somente o último comando.
-Também é possível usar `.\.venv313\Scripts\python -m oceancode.main`.
-No editor, selecione `.venv313\Scripts\python.exe` como interpretador.
-O ambiente virtual guarda o Python e as dependências locais; ele não contém
-o código da aplicação e não deve ser incluído no Git. Basta um ambiente.
-O Python 3.14 apresentou falha de instalação do Pygame nesta máquina.
+## Arquitetura MVC
 
-## Organização
+Os arquivos e diretórios originais foram preservados; os identificadores da
+aplicação estão em português brasileiro.
 
-```text
-OceanCode/                 # raiz do repositório e do workspace
-├── .git/                  # histórico Git preservado
-├── .venv313/              # único ambiente virtual, ignorado pelo Git
-├── main.py                # entrada simples para executar a aplicação
-├── requirements.txt
-├── smoke_check.py         # verificação automática sem janela
-├── README.md
-└── oceancode/             # pacote da aplicação
-    ├── main.py            # inicialização; também executável como módulo
-    ├── config.py          # configurações visuais e caminho do cenário
-    ├── models/            # missões, fases e estado em memória
-    ├── views/             # telas e componentes de desenho
-    ├── controllers/       # eventos, navegação e comandos
-    └── assets/            # imagens, áudio e fontes
-```
+- **Model:** `EstadoJogo`, `Missao`, `Desafio` e `StatusDesafio` guardam mapas,
+  sequência, posição lógica, progresso, XP e configuração de som. Não desenham
+  nem dependem do Pygame.
+- **Controller:** `ControladorAplicacao` mantém o loop e encaminha eventos;
+  `ControladorNavegacao` seleciona telas e valida o acesso aos conteúdos;
+  `ControladorJogo` edita a sequência, executa movimentos, valida colisões,
+  define o retorno e atualiza progresso e XP.
+- **View:** `ViewInicio`, `ViewMissoes`, `ViewDesafios`, `ViewJogo` e
+  `ViewRetorno` apresentam o estado. `ViewBase` centraliza fundo, cabeçalho,
+  HUD, voltar e som. `Botao`, `PastaMissao`, `BotaoDesafio` e `FundoOceanico`
+  são componentes reutilizáveis.
 
-O `main.py` da raiz chama a inicialização do pacote: os dois arquivos têm
-responsabilidades pequenas e distintas, sem duplicar a lógica da aplicação.
-O loop principal fica no `AppController`. A separação segue MVC adaptado ao
-Pygame: Model guarda dados, View desenha e Controller trata eventos.
+`config.py` reúne resolução, FPS, paleta, fontes, dimensões principais,
+intervalo de comandos e caminhos dos assets. O ponto de entrada da raiz
+chama `principal` no pacote, sem duplicar o loop.
 
-## Demonstração
+## Telas e controles
 
-Jogar → Missões → Fases → Jogo. Voltar ou Esc retorna à tela anterior.
-Sair ou fechar a janela encerra a aplicação. Música alterna o estado visual.
-Missões 1 e 2 estão disponíveis; 3 e 4 estão bloqueadas. Fases 1 e 2 estão
-concluídas e podem ser revisitadas; fase 3 está disponível e 4–10 bloqueadas.
+Jogar → Missões → Missão 1 → Desafios → Jogo → Retorno de sucesso ou erro.
+Voltar ou Esc retorna à tela anterior; sair ou fechar a janela encerra.
+Voltar durante a execução cancela os movimentos restantes.
 
-As quatro setas à direita adicionam comandos à sequência inferior, até 12
-comandos. Clique em um comando da sequência para removê-lo. Limpar apaga
-a sequência; Executar mostra uma mensagem de prévia, sem movimentação.
-Abrir uma fase reinicia a sequência. XP 120 e nível 3 são fictícios.
+No jogo, o tabuleiro permanece à esquerda, os comandos à direita e a área
+de programação embaixo. Clique nas setas para adicionar comandos e nos
+comandos da sequência para removê-los. Limpar apaga a sequência.
 
-O tabuleiro 8 × 6 usa formas do Pygame para desenhar submarino, pedras e
-objetivo. Um cenário opcional pode ser adicionado em
-`oceancode/assets/images/tabuleiro_oceano.png`; sem ele, o fundo é desenhado
-pelo Pygame. Não há áudio real, movimento, colisões, vitória, desbloqueio,
-persistência, banco de dados ou cálculo real de XP nesta etapa.
+Executar reinicia o submarino na posição inicial e move uma célula a cada
+380 ms pelo loop normal, sem espera bloqueante. Durante a execução, a edição
+fica desabilitada e o comando atual recebe destaque. Colisão e saída do mapa
+interrompem a execução com erro. Alcançar a amostra encerra com sucesso,
+mesmo se existirem comandos restantes. Terminar sem alcançá-la gera erro.
+Tentar novamente mantém a sequência para permitir corrigi-la.
+
+O botão circular de som alterna apenas `musica_ativada` e seu ícone; não há
+música ou efeitos reais.
+
+## Missão 1 — Primeira Expedição
+
+Conteúdo: Sequências. Os mapas ficam em `models/mission.py`; posições são
+pares `(coluna, linha)`, independentes de pixels, no tabuleiro 8 × 6.
+
+| Desafio | Início | Amostra | Rochas | Limite | XP |
+| --- | --- | --- | --- | --- | --- |
+| 1 — Primeiros Movimentos | (0, 2) | (3, 2) | Nenhuma | 5 | 20 |
+| 2 — Contornando Obstáculos | (0, 4) | (3, 2) | (1, 4) | 7 | 30 |
+| 3 — Rota de Exploração | (0, 5) | (4, 1) | (0, 4), (2, 4), (2, 2), (4, 3) | 10 | 50 |
+
+Uma solução do terceiro desafio é: direita, cima, cima, cima, cima, direita,
+direita, direita. Os testes buscam rotas nos três mapas e validam seus limites.
+
+A sessão começa com XP 0, nível 1 e apenas o Desafio 1 disponível. Sua
+conclusão libera o 2; concluir o 2 libera o 3. O 3 não libera o 4. Desafios
+concluídos podem ser repetidos sem conceder XP novamente. O total desta
+versão é 100 XP; o nível permanece 1. O cartão acompanha o progresso até
+3/10. A recompensa futura da missão (+100 XP) não é concedida nesta etapa.
+
+Missões 2–4 e desafios 4–10 permanecem visíveis e bloqueados, inclusive na
+validação do Controller.
+
+## Assets opcionais
+
+A aplicação funciona sem imagens externas. O fundo oceânico é desenhado
+pelo Pygame, com gradiente, bolhas, silhuetas e sombras discretas.
+
+Imagens opcionais em `oceancode/assets/images`:
+
+- `tabuleiro_oceano.png`: cenário utilizado pelas telas e pelo tabuleiro.
+- `submarino.png`, `barreira.png`, `objetivo.png`: substituem as respectivas
+  formas geométricas; preservam proporção e se ajustam às células.
+
+Imagens ausentes ou inválidas mantêm o desenho geométrico. Essas substituições
+são responsabilidade da View e não alteram as regras nem as posições lógicas.
 
 ## Verificar
 
 ```powershell
-.\.venv313\Scripts\python smoke_check.py
+.\.venv313\Scripts\python.exe smoke_check.py
+.\.venv313\Scripts\python.exe -m compileall -q oceancode main.py smoke_check.py
 ```
 
-A verificação renderiza as quatro telas sem abrir janela e testa os cliques,
-bloqueios, música, edição de comandos e encerramento.
+O smoke check testa regras sem renderização e renderiza as cinco telas com
+SDL em modo sem janela. Verifica rotas, temporização, colisões, limites,
+edição de comandos, progressão, XP único, bloqueios, retorno, repetição,
+navegação, ícone de som e encerramento do loop. A aparência e os estados
+hover/pressionado devem também ser conferidos manualmente em uma janela real.
+
+## Evoluções pendentes
+
+Desafios 4–10, missões 2–4, condicionais, repetição, funções, áudio real,
+sprites definitivos, persistência, perfis, conquistas, ranking e editor de
+fases ainda não estão implementados. Não há banco de dados, login ou novas
+dependências além do Pygame.
