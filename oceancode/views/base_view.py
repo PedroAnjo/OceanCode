@@ -1,6 +1,7 @@
 ﻿import pygame
 from .components.button import Botao, texto, painel
 from .components.ocean_background import FundoOceanico
+from .components.progress_bar import barra_progresso, estrela
 from .. import config as c
 
 class ViewBase:
@@ -12,15 +13,19 @@ class ViewBase:
         self.fundo.desenhar(superficie)
         self.botoes = []
 
-    def cabecalho(self, superficie, titulo, subtitulo):
-        texto(superficie, titulo, (122, 24), c.FONTE_CABECALHO)
+    def cabecalho(self, superficie, titulo, subtitulo, peso='bold'):
+        texto(superficie, titulo, (122, 24), c.FONTE_CABECALHO, peso=peso,
+              largura_maxima=790)
         texto(superficie, subtitulo, (122, 72), c.FONTE_PEQUENA)
 
     def hud(self, superficie, estado, posicao=(940, 25)):
         x, y = posicao
-        texto(superficie, f'XP: {estado.xp}   •   Nível: {estado.nivel}', (x,y), 20)
-        pygame.draw.rect(superficie, c.SUAVE, (x,y+30,270,10), border_radius=5)
-        pygame.draw.rect(superficie, c.AMARELO, (x,y+30,int(270*min(estado.xp/c.META_XP,1)),10), border_radius=5)
+        painel(superficie, (x-14,y-10,300,70), c.BRANCO)
+        estrela(superficie, (x+10,y+11), 11)
+        texto(superficie, f'{estado.xp} XP', (x+30,y-3), 20, peso='semibold')
+        texto(superficie, f'Nível {estado.nivel}', (x+175,y-3), 18, peso='semibold')
+        barra_progresso(superficie, (x,y+28,270,12), estado.xp,c.META_XP,
+                        cor=c.AMARELO,cor_fundo=c.SUAVE)
 
     def finalizar(self, superficie, estado, posicao_mouse, voltar=True):
         if voltar:

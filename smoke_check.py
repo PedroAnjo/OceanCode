@@ -1,6 +1,7 @@
 """Verificação de regras sem renderização e do fluxo por cliques, sem janela."""
 import os
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
+os.environ['SDL_AUDIODRIVER'] = 'dummy'
 from collections import deque
 import pygame
 from oceancode import config as c
@@ -78,8 +79,21 @@ def verificar_interface():
     try:
         assert aplicacao.navegacao.ativa == 'inicio'
         assert aplicacao.estado.xp == 0 and aplicacao.estado.nivel == 1
+        if c.MUSICA_FUNDO.is_file():
+            assert aplicacao.audio.musica_carregada and pygame.mixer.music.get_busy()
+        if c.SOM_CLIQUE.is_file():
+            assert aplicacao.audio.som_clique is not None
+            aplicacao.audio.tocar_clique()
+            assert aplicacao.audio.som_clique.get_num_channels() > 0
         clicar(('musica',))
         assert not aplicacao.estado.musica_ativada
+        assert not pygame.mixer.music.get_busy()
+        if aplicacao.audio.som_clique is not None:
+            assert aplicacao.audio.som_clique.get_num_channels() == 0
+        clicar(('musica',))
+        if aplicacao.audio.musica_carregada:
+            assert pygame.mixer.music.get_busy()
+        clicar(('musica',))
         assert aplicacao.telas['inicio'].botoes[-1].icone == 'som_desligado'
         clicar(('jogar',))
         assert aplicacao.navegacao.ativa == 'missoes'

@@ -9,6 +9,7 @@ from ..views.game_view import ViewJogo
 from ..views.result_view import ViewRetorno
 from .navigation_controller import ControladorNavegacao
 from .game_controller import ControladorJogo
+from .audio_controller import ControladorAudio
 
 class ControladorAplicacao:
     def __init__(self):
@@ -19,6 +20,7 @@ class ControladorAplicacao:
         pygame.display.set_caption(c.TITULO)
         self.relogio = pygame.time.Clock()
         self.estado = EstadoJogo()
+        self.audio = ControladorAudio(self.estado)
         self.navegacao = ControladorNavegacao(self.estado)
         self.jogo = ControladorJogo(self.estado)
         self.telas = {'inicio':ViewInicio(),'missoes':ViewMissoes(),'desafios':ViewDesafios(),
@@ -36,6 +38,7 @@ class ControladorAplicacao:
             self.navegacao.voltar()
         elif tipo == 'musica':
             self.estado.musica_ativada = not self.estado.musica_ativada
+            self.audio.atualizar_som()
         elif tipo == 'missao':
             self.navegacao.selecionar_missao(argumentos[0])
         elif tipo == 'desafio':
@@ -62,6 +65,7 @@ class ControladorAplicacao:
             for botao in self.telas[self.navegacao.ativa].botoes:
                 if botao.contem(evento.pos):
                     self.tratar_acao(botao.acao)
+                    self.audio.tocar_clique()
                     break
             self.desenhar()
 

@@ -61,8 +61,12 @@ interrompem a execução com erro. Alcançar a amostra encerra com sucesso,
 mesmo se existirem comandos restantes. Terminar sem alcançá-la gera erro.
 Tentar novamente mantém a sequência para permitir corrigi-la.
 
-O botão circular de som alterna apenas `musica_ativada` e seu ícone; não há
-música ou efeitos reais.
+O botão circular de som alterna `musica_ativada`, pausa ou retoma a música
+e silencia os efeitos. `ControladorAudio` carrega os arquivos de
+`oceancode/assets/audio`: `hard pop.wav` para cliques em botões habilitados
+e `turning_pages-bio-luminescence-601591.mp3` para música em loop desde o
+início. Os volumes ficam em `config.py`. Arquivos ausentes ou inválidos e
+indisponibilidade do dispositivo de áudio não impedem a abertura do jogo.
 
 ## Missão 1 — Primeira Expedição
 
@@ -88,6 +92,19 @@ Missões 2–4 e desafios 4–10 permanecem visíveis e bloqueados, inclusive na
 validação do Controller.
 
 ## Assets opcionais
+
+A tipografia está preparada para Fredoka, com pesos Medium, SemiBold e Bold.
+Adicione manualmente os arquivos em `oceancode/assets/fonts`:
+`Fredoka-Medium.ttf`, `Fredoka-SemiBold.ttf` e `Fredoka-Bold.ttf`.
+Reinicie o jogo após adicioná-los. Fontes ausentes ou inválidas utilizam a
+fonte de sistema; os objetos de fonte são mantidos em cache por tamanho e peso.
+
+As pastas de missão apresentam barras proporcionais aos desafios concluídos,
+contador e recompensa futura. As três estrelas são indicadores visuais:
+primeiro desafio concluído, metade da missão e missão completa. Não concedem
+XP adicional. Nesta versão, 3/10 preenche 30% da barra e mostra uma estrela.
+O HUD apresenta o XP da sessão em relação à meta de 100 XP, mantendo o nível
+atual do Model. A logo da tela inicial mantém sua imagem, escala e posição.
 
 A aplicação funciona sem imagens externas. O fundo oceânico é desenhado
 pelo Pygame, com gradiente, bolhas, silhuetas e sombras discretas.
@@ -116,7 +133,7 @@ hover/pressionado devem também ser conferidos manualmente em uma janela real.
 
 ## Evoluções pendentes
 
-Desafios 4–10, missões 2–4, condicionais, repetição, funções, áudio real,
+Desafios 4–10, missões 2–4, condicionais, repetição, funções, efeitos de movimento e resultado,
 sprites definitivos, persistência, perfis, conquistas, ranking e editor de
 fases ainda não estão implementados. Não há banco de dados, login ou novas
 dependências além do Pygame.

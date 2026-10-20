@@ -7,10 +7,11 @@ class ViewRetorno(ViewBase):
         self.hud(superficie,estado)
         painel(superficie,(220,150,840,440))
         sucesso = estado.tipo_resultado == 'sucesso'
-        texto(superficie,'Expedição concluída!' if sucesso else 'Quase lá!',(640,225),42,centralizado=True)
+        texto(superficie,'Expedição concluída!' if sucesso else 'Quase lá!',(640,225),42,
+              centralizado=True,peso='bold',largura_maxima=792)
         texto(superficie,estado.mensagem_resultado,(640,295),24,centralizado=True)
         if sucesso:
-            texto(superficie,f'+{estado.xp_recebido} XP' if estado.xp_recebido else 'Desafio já concluído • XP já recebido',(640,345),24,centralizado=True)
+            texto(superficie,f'+{estado.xp_recebido} XP' if estado.xp_recebido else 'Desafio já concluído • XP já recebido',(640,345),24,centralizado=True,peso='semibold')
         self.botoes = []
         if sucesso:
             if estado.proximo_disponivel:

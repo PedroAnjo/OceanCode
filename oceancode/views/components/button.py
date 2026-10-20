@@ -2,12 +2,24 @@
 import pygame
 from ... import config as c
 
-@lru_cache(maxsize=32)
-def fonte(tamanho):
-    return pygame.font.SysFont(c.NOME_FONTE, tamanho)
+@lru_cache(maxsize=96)
+def fonte(tamanho, peso='medio'):
+    caminhos = {'medio': c.FONTE_MEDIA, 'semibold': c.FONTE_SEMIBOLD, 'bold': c.FONTE_BOLD}
+    caminho = caminhos.get(peso, c.FONTE_MEDIA)
+    if caminho.is_file():
+        try:
+            return pygame.font.Font(str(caminho), tamanho)
+        except (pygame.error, OSError):
+            pass
+    return pygame.font.SysFont(c.NOME_FONTE, tamanho, bold=peso in ('semibold', 'bold'))
 
-def texto(superficie, rotulo, posicao, tamanho=c.FONTE_CORPO, cor=c.AZUL_ESCURO, centralizado=False):
-    desenho = fonte(tamanho).render(str(rotulo), True, cor)
+def texto(superficie, rotulo, posicao, tamanho=c.FONTE_CORPO, cor=c.AZUL_ESCURO,
+          centralizado=False, peso='medio', largura_maxima=None):
+    rotulo = str(rotulo)
+    if largura_maxima is not None:
+        while tamanho > 12 and fonte(tamanho, peso).size(rotulo)[0] > largura_maxima:
+            tamanho -= 1
+    desenho = fonte(tamanho, peso).render(rotulo, True, cor)
     retangulo = desenho.get_rect(center=posicao) if centralizado else desenho.get_rect(topleft=posicao)
     superficie.blit(desenho, retangulo)
 
@@ -47,7 +59,8 @@ class Botao:
             if self.direcao:
                 seta(superficie, self.direcao, self.retangulo.center)
             else:
-                texto(superficie, self.rotulo, self.retangulo.center, centralizado=True)
+                texto(superficie, self.rotulo, self.retangulo.center, centralizado=True,
+                      peso='semibold', largura_maxima=self.retangulo.width - 24)
 
     def contem(self, posicao):
         if self.icone:

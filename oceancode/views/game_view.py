@@ -58,15 +58,16 @@ class ViewJogo(ViewBase):
     def desenhar(self, superficie, estado, posicao_mouse):
         self.iniciar(superficie)
         desafio = estado.desafio_selecionado
-        self.cabecalho(superficie, f'Desafio {desafio.numero} — {desafio.nome}', desafio.objetivo)
+        self.cabecalho(superficie, f'Desafio {desafio.numero} — {desafio.nome}', desafio.objetivo,
+                       peso='semibold')
         self.hud(superficie,estado)
         self.tabuleiro(superficie,estado)
         painel(superficie,c.RETANGULO_PAINEL_COMANDOS)
-        texto(superficie,'COMANDOS',(1084,145),24,centralizado=True)
+        texto(superficie,'COMANDOS',(1084,145),24,centralizado=True,peso='semibold')
         self.botoes = [Botao((988,180+indice*76,192,60),'',('comando',direcao),not estado.executando,direcao)
                        for indice,direcao in enumerate(('cima','baixo','esquerda','direita'))]
         painel(superficie,c.RETANGULO_PROGRAMACAO)
-        texto(superficie,'ÁREA DE PROGRAMAÇÃO',(72,533),22)
+        texto(superficie,'ÁREA DE PROGRAMAÇÃO',(72,533),22,peso='semibold')
         texto(superficie,f'{len(estado.comandos)}/{desafio.limite_comandos} • Clique para remover',(540,536),18)
         for indice in range(desafio.limite_comandos):
             retangulo = pygame.Rect(c.ORIGEM_SLOTS[0]+indice*c.ESPACAMENTO_SLOTS,
