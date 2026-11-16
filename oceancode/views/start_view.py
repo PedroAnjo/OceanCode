@@ -25,6 +25,8 @@ class ViewInicio(ViewBase):
         else:
             texto(superficie, 'OceanCode', c.CENTRO_LOGO, c.FONTE_TITULO, centralizado=True)
             texto(superficie, 'Expedição Oceânica', (640,300 if self.logo is not None else 278), 30, centralizado=True)
-        self.botoes = [Botao((500,520,280,58), 'JOGAR', ('jogar',)),
-                       Botao((500,606,280,58), 'SAIR', ('sair',))]
+        self.botoes = [Botao((500,494,280,40), 'INICIAR', ('iniciar',)),
+                       Botao((500,542,280,40), 'CONTINUAR', ('continuar',), estado.partida_iniciada),
+                       Botao((500,590,280,40), 'TUTORIAL', ('abrir_tutorial',)),
+                       Botao((500,638,280,40), 'SAIR', ('sair',))]
         self.finalizar(superficie, estado, posicao_mouse, voltar=False)

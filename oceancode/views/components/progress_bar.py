@@ -1,5 +1,6 @@
 """Indicadores desenhados com Pygame, sem assets ou mudanças no progresso."""
 import math
+from functools import lru_cache
 import pygame
 from ... import config as c
 
@@ -39,7 +40,24 @@ def estrelas_missao(superficie, centro, concluidos, total):
                 preenchida=indice < quantidade, cor=c.AZUL)
 
 
+@lru_cache(maxsize=1)
+def imagem_cadeado():
+    if c.IMAGEM_CADEADO.is_file():
+        try:
+            imagem = pygame.image.load(str(c.IMAGEM_CADEADO)).convert_alpha()
+            proporcao = min(24 / imagem.get_width(), 28 / imagem.get_height())
+            return pygame.transform.smoothscale(imagem, (max(1, round(imagem.get_width() * proporcao)),
+                                                         max(1, round(imagem.get_height() * proporcao))))
+        except (pygame.error, OSError):
+            pass
+    return None
+
+
 def cadeado(superficie, centro):
+    imagem = imagem_cadeado()
+    if imagem is not None:
+        superficie.blit(imagem, imagem.get_rect(center=centro))
+        return
     x, y = centro
     pygame.draw.rect(superficie, c.AZUL_ESCURO, (x-9, y-2, 18, 15), border_radius=4)
     pygame.draw.arc(superficie, c.AZUL_ESCURO, (x-7, y-13, 14, 20), 0, math.pi, 3)

@@ -6,6 +6,12 @@ class StatusDesafio(Enum):
     DISPONIVEL = 'Disponível'
     BLOQUEADO = 'Bloqueado'
 
+class TipoDesafio(Enum):
+    SEQUENCIA = 'Sequência'
+    CONDICIONAIS = 'Condicionais'
+    REPETICAO = 'Repetição'
+    DEPURACAO = 'Depuração'
+
 @dataclass
 class Desafio:
     numero: int
@@ -18,6 +24,7 @@ class Desafio:
     limite_comandos: int = 5
     recompensa_xp: int = 0
     implementado: bool = False
+    tipo: TipoDesafio = TipoDesafio.SEQUENCIA
 
     @property
     def jogavel(self):

@@ -1,5 +1,6 @@
 ﻿from functools import lru_cache
 import pygame
+from math import pi
 from ... import config as c
 
 @lru_cache(maxsize=96)
@@ -35,34 +36,78 @@ def seta(superficie, direcao, centro, cor=c.AZUL_ESCURO):
         pontos = [(-py, px) for px, py in pontos]
     pygame.draw.polygon(superficie, cor, [(x + px, y + py) for px, py in pontos])
 
+@lru_cache(maxsize=1)
+def imagem_foguete():
+    if c.IMAGEM_FOGUETE.is_file():
+        try:
+            imagem = pygame.image.load(str(c.IMAGEM_FOGUETE)).convert_alpha()
+            proporcao = min(32 / imagem.get_width(), 34 / imagem.get_height())
+            return pygame.transform.smoothscale(imagem, (max(1, round(imagem.get_width() * proporcao)),
+                                                         max(1, round(imagem.get_height() * proporcao))))
+        except (pygame.error, OSError):
+            pass
+    return None
+
+
+def foguete(superficie, centro):
+    imagem = imagem_foguete()
+    if imagem is not None:
+        superficie.blit(imagem, imagem.get_rect(center=centro))
+        return
+    x, y = centro
+    pygame.draw.polygon(superficie, c.BRANCO, [(x-5,y+9),(x,y+17),(x+5,y+9)])
+    pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x,y-16),(x+7,y-7),(x+7,y+9),(x-7,y+9),(x-7,y-7)])
+    pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x-7,y),(x-14,y+12),(x-7,y+9)])
+    pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x+7,y),(x+14,y+12),(x+7,y+9)])
+    pygame.draw.circle(superficie, c.SUAVE, (x,y-4), 4)
+
+
+@lru_cache(maxsize=1)
+def imagem_repetir():
+    if c.IMAGEM_REPETIR.is_file():
+        try:
+            imagem = pygame.image.load(str(c.IMAGEM_REPETIR)).convert_alpha()
+            proporcao = min(32 / imagem.get_width(), 32 / imagem.get_height())
+            return pygame.transform.smoothscale(imagem, (max(1, round(imagem.get_width() * proporcao)),
+                                                         max(1, round(imagem.get_height() * proporcao))))
+        except (pygame.error, OSError):
+            pass
+    return None
+
+
+def repetir(superficie, centro):
+    imagem = imagem_repetir()
+    if imagem is not None:
+        superficie.blit(imagem, imagem.get_rect(center=centro))
+        return
+    x, y = centro
+    pygame.draw.arc(superficie, c.AZUL_ESCURO, (x-13, y-13, 26, 26), pi / 4, 2 * pi, 3)
+    pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x+13,y-7), (x+7,y+2), (x+18,y+2)])
+
+
 class Botao:
     def __init__(self, retangulo, rotulo, acao, habilitado=True, direcao=None, icone=None):
         self.retangulo = pygame.Rect(retangulo)
         self.rotulo, self.acao = rotulo, acao
-        self.habilitado, self.direcao, self.icone = habilitado, direcao, icone
+        self.habilitado, self.direcao = habilitado, direcao
+        self.icone = icone
 
     def desenhar(self, superficie, posicao_mouse):
         cor = c.AMARELO if self.habilitado else c.CINZA
         if self.habilitado and self.retangulo.collidepoint(posicao_mouse):
             cor = c.AMARELO_PRESSIONADO if pygame.mouse.get_pressed()[0] else c.AMARELO_HOVER
-        if self.icone:
-            pygame.draw.circle(superficie, cor, self.retangulo.center, self.retangulo.width // 2)
-            x, y = self.retangulo.center
-            pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x-12,y-6),(x-6,y-6),(x+2,y-12),(x+2,y+12),(x-6,y+6),(x-12,y+6)])
-            if self.icone == 'som_ligado':
-                pygame.draw.arc(superficie, c.AZUL_ESCURO, (x-7,y-13,22,26), -1.1, 1.1, 2)
-            else:
-                pygame.draw.line(superficie, c.AZUL_ESCURO, (x+6,y-7), (x+15,y+7), 3)
-                pygame.draw.line(superficie, c.AZUL_ESCURO, (x+6,y+7), (x+15,y-7), 3)
+        painel(superficie, self.retangulo, cor)
+        if self.icone == 'foguete':
+            centro = (self.retangulo.x + 28, self.retangulo.centery) if self.rotulo else self.retangulo.center
+            foguete(superficie, centro)
+            if self.rotulo:
+                texto(superficie, self.rotulo, (self.retangulo.centerx + 20, self.retangulo.centery),
+                      centralizado=True, peso='semibold', largura_maxima=self.retangulo.width - 72)
+        elif self.direcao:
+            seta(superficie, self.direcao, self.retangulo.center)
         else:
-            painel(superficie, self.retangulo, cor)
-            if self.direcao:
-                seta(superficie, self.direcao, self.retangulo.center)
-            else:
-                texto(superficie, self.rotulo, self.retangulo.center, centralizado=True,
-                      peso='semibold', largura_maxima=self.retangulo.width - 24)
+            texto(superficie, self.rotulo, self.retangulo.center, centralizado=True,
+                  peso='semibold', largura_maxima=self.retangulo.width - 24)
 
     def contem(self, posicao):
-        if self.icone:
-            return self.habilitado and pygame.Vector2(posicao).distance_to(self.retangulo.center) <= self.retangulo.width / 2
         return self.habilitado and self.retangulo.collidepoint(posicao)

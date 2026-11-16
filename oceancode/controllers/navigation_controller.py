@@ -8,6 +8,11 @@
         self.ativa = {'missoes': 'inicio', 'desafios': 'missoes',
                       'jogo': 'desafios', 'retorno': 'desafios'}.get(self.ativa, 'inicio')
 
+    def voltar_inicio(self):
+        self.estado.executando = False
+        self.estado.tempo_acumulado = 0
+        self.ativa = 'inicio'
+
     def selecionar_missao(self, numero):
         missao = next((missao for missao in self.estado.missoes if missao.numero == numero), None)
         if missao and missao.disponivel:

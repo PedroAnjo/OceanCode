@@ -15,12 +15,13 @@ class ViewBase:
 
     def cabecalho(self, superficie, titulo, subtitulo, peso='bold'):
         texto(superficie, titulo, (122, 24), c.FONTE_CABECALHO, peso=peso,
-              largura_maxima=790)
-        texto(superficie, subtitulo, (122, 72), c.FONTE_PEQUENA)
+              largura_maxima=c.RETANGULO_HUD[0] - 140)
+        texto(superficie, subtitulo, (122, 72), c.FONTE_PEQUENA,
+              largura_maxima=c.RETANGULO_HUD[0] - 140)
 
-    def hud(self, superficie, estado, posicao=(940, 25)):
-        x, y = posicao
-        painel(superficie, (x-14,y-10,300,70), c.BRANCO)
+    def hud(self, superficie, estado):
+        x, y = c.RETANGULO_HUD[0] + 14, c.RETANGULO_HUD[1] + 10
+        painel(superficie, c.RETANGULO_HUD, c.BRANCO)
         estrela(superficie, (x+10,y+11), 11)
         texto(superficie, f'{estado.xp} XP', (x+30,y-3), 20, peso='semibold')
         texto(superficie, f'Nível {estado.nivel}', (x+175,y-3), 18, peso='semibold')
@@ -30,7 +31,11 @@ class ViewBase:
     def finalizar(self, superficie, estado, posicao_mouse, voltar=True):
         if voltar:
             self.botoes.append(Botao(c.RETANGULO_VOLTAR, '‹', ('voltar',)))
-        self.botoes.append(Botao(c.RETANGULO_SOM, '', ('musica',),
-                                icone='som_ligado' if estado.musica_ativada else 'som_desligado'))
+        self.botoes.append(Botao(c.RETANGULO_MENU, 'Menu', ('abrir_menu',)))
         for botao in self.botoes:
             botao.desenhar(superficie, posicao_mouse)
+
+    def desenhar_aviso(self, superficie, mensagem):
+        painel(superficie, (32, 682, 1216, 30), c.AMARELO)
+        texto(superficie, mensagem, (640, 697), c.FONTE_PEQUENA,
+              centralizado=True, largura_maxima=1184)

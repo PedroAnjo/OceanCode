@@ -7,6 +7,7 @@ class ControladorAudio:
         self.estado = estado
         self.som_clique = None
         self.musica_carregada = False
+        self.musica_iniciada = False
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
@@ -22,24 +23,36 @@ class ControladorAudio:
             try:
                 pygame.mixer.music.load(str(c.MUSICA_FUNDO))
                 pygame.mixer.music.set_volume(c.VOLUME_MUSICA)
-                if estado.musica_ativada:
-                    pygame.mixer.music.play(loops=-1)
                 self.musica_carregada = True
             except (pygame.error, OSError):
                 pass
+        self.atualizar_musica()
 
     def tocar_clique(self):
-        if self.estado.musica_ativada and self.som_clique is not None:
-            self.som_clique.play()
+        if self.estado.efeitos_ativados and self.som_clique is not None and pygame.mixer.get_init():
+            try:
+                self.som_clique.play()
+            except (pygame.error, OSError):
+                pass
 
-    def atualizar_som(self):
-        if not pygame.mixer.get_init():
+    def atualizar_musica(self):
+        if not self.musica_carregada or not pygame.mixer.get_init():
             return
-        if self.estado.musica_ativada:
-            if self.musica_carregada:
-                pygame.mixer.music.unpause()
-                if not pygame.mixer.music.get_busy():
+        try:
+            if self.estado.musica_ativada:
+                if self.musica_iniciada:
+                    pygame.mixer.music.unpause()
+                else:
                     pygame.mixer.music.play(loops=-1)
-        else:
-            pygame.mixer.music.pause()
-            pygame.mixer.stop()
+                    self.musica_iniciada = True
+            else:
+                pygame.mixer.music.pause()
+        except (pygame.error, OSError):
+            pass
+
+    def atualizar_efeitos(self):
+        if not self.estado.efeitos_ativados and pygame.mixer.get_init():
+            try:
+                pygame.mixer.stop()
+            except (pygame.error, OSError):
+                pass
