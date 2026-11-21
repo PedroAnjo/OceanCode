@@ -85,6 +85,20 @@ def repetir(superficie, centro):
     pygame.draw.polygon(superficie, c.AZUL_ESCURO, [(x+13,y-7), (x+7,y+2), (x+18,y+2)])
 
 
+def som(superficie, centro, silenciado=False, cor=c.AZUL_ESCURO):
+    """Desenha o ícone de volume usado pelo botão de áudio global."""
+    x, y = centro
+    pygame.draw.polygon(superficie, cor,
+                        [(x - 15, y - 5), (x - 7, y - 5), (x + 4, y - 14),
+                         (x + 4, y + 14), (x - 7, y + 5), (x - 15, y + 5)])
+    if silenciado:
+        pygame.draw.line(superficie, cor, (x + 9, y - 12), (x + 20, y + 12), 4)
+        pygame.draw.line(superficie, cor, (x + 20, y - 12), (x + 9, y + 12), 4)
+    else:
+        pygame.draw.arc(superficie, cor, (x - 2, y - 11, 22, 22), -pi / 3, pi / 3, 3)
+        pygame.draw.arc(superficie, cor, (x - 2, y - 18, 34, 36), -pi / 3, pi / 3, 3)
+
+
 class Botao:
     def __init__(self, retangulo, rotulo, acao, habilitado=True, direcao=None, icone=None):
         self.retangulo = pygame.Rect(retangulo)
@@ -96,6 +110,14 @@ class Botao:
         cor = c.AMARELO if self.habilitado else c.CINZA
         if self.habilitado and self.retangulo.collidepoint(posicao_mouse):
             cor = c.AMARELO_PRESSIONADO if pygame.mouse.get_pressed()[0] else c.AMARELO_HOVER
+        if self.icone in ('som', 'som_bloqueado'):
+            pygame.draw.circle(superficie, c.BORDA,
+                               (self.retangulo.centerx, self.retangulo.centery + 4),
+                               self.retangulo.width // 2)
+            pygame.draw.circle(superficie, cor, self.retangulo.center,
+                               self.retangulo.width // 2)
+            som(superficie, self.retangulo.center, self.icone == 'som_bloqueado')
+            return
         painel(superficie, self.retangulo, cor)
         if self.icone == 'missil':
             centro = (self.retangulo.x + 28, self.retangulo.centery) if self.rotulo else self.retangulo.center

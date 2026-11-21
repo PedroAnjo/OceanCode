@@ -29,7 +29,8 @@ class ControladorAudio:
         self.atualizar_musica()
 
     def tocar_clique(self):
-        if self.estado.efeitos_ativados and self.som_clique is not None and pygame.mixer.get_init():
+        if (self.estado.audio_ativado and self.estado.efeitos_ativados
+                and self.som_clique is not None and pygame.mixer.get_init()):
             try:
                 self.som_clique.play()
             except (pygame.error, OSError):
@@ -39,7 +40,7 @@ class ControladorAudio:
         if not self.musica_carregada or not pygame.mixer.get_init():
             return
         try:
-            if self.estado.musica_ativada:
+            if self.estado.audio_ativado and self.estado.musica_ativada:
                 if self.musica_iniciada:
                     pygame.mixer.music.unpause()
                 else:

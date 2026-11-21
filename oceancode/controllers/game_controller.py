@@ -21,13 +21,20 @@ class ControladorJogo:
             if comando == 'repetir' and estado.destino_laco is not None:
                 estado.mensagem = 'Adicione laços na sequência principal.'
                 return
-            if estado.total_blocos >= estado.desafio_selecionado.limite_comandos:
-                estado.mensagem = 'Limite de comandos atingido.'
+            limite = estado.desafio_selecionado.limite_comandos
+            mensagem_limite = (
+                f'Limite de {limite} blocos atingido. '
+                'O laço e seus comandos internos também contam.'
+            )
+            if estado.total_blocos >= limite:
+                estado.mensagem = mensagem_limite
                 return
             destino = (estado.comandos if estado.destino_laco is None
                        else estado.comandos[estado.destino_laco].corpo)
             destino.append(Comando(comando))
-            estado.mensagem = ''
+            estado.mensagem = mensagem_limite if estado.total_blocos == limite else ''
+            return ((len(estado.comandos) - 1, None) if estado.destino_laco is None
+                    else (estado.destino_laco, len(destino) - 1))
         elif tipo == 'destino':
             indice = argumentos[0]
             if indice is None or (estado.permite_repeticao and 0 <= indice < len(estado.comandos)

@@ -46,6 +46,8 @@ class ControladorAplicacao:
         try:
             self.persistencia.preparar()
             self.estado.musica_ativada, self.estado.efeitos_ativados = self.persistencia.carregar_preferencias()
+            self.estado.audio_ativado = (self.estado.musica_ativada
+                                         and self.estado.efeitos_ativados)
             self.estado.partida_iniciada = self.persistencia.existe_salvamento()
         except ErroPersistencia:
             self.mensagem_persistencia = 'Não foi possível acessar os dados salvos.'
@@ -103,7 +105,17 @@ class ControladorAplicacao:
     def tratar_acao(self, acao):
         tela_anterior = self.navegacao.ativa
         tipo,*argumentos = acao
-        if tipo == 'sair':
+        if tipo == 'alternar_audio':
+            self.estado.audio_ativado = not self.estado.audio_ativado
+            self.estado.musica_ativada = self.estado.audio_ativado
+            self.estado.efeitos_ativados = self.estado.audio_ativado
+            self.audio.atualizar_musica()
+            try:
+                self.persistencia.salvar_preferencias(
+                    self.estado.musica_ativada, self.estado.efeitos_ativados)
+            except ErroPersistencia:
+                self.mensagem_persistencia = 'Não foi possível salvar a preferência de áudio.'
+        elif tipo == 'sair':
             self.em_execucao = False
         elif tipo == 'iniciar' and self.navegacao.ativa == 'inicio':
             self.solicitar_nova_partida()
@@ -136,7 +148,9 @@ class ControladorAplicacao:
             if proximo:
                 self.navegacao.selecionar_desafio(proximo.numero)
         elif self.navegacao.ativa == 'jogo':
-            self.jogo.tratar_acao(acao)
+            inserido = self.jogo.tratar_acao(acao)
+            if inserido is not None:
+                self.telas['jogo'].programacao.mostrar_comando(self.estado, inserido)
         if tela_anterior == 'jogo' and (self.navegacao.ativa != 'jogo' or not self.em_execucao):
             self.estado.executando = False
             self.estado.tempo_resultado_ms = 0

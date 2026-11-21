@@ -30,6 +30,9 @@ class ViewBase:
     def finalizar(self, superficie, estado, posicao_mouse, voltar=True):
         if voltar:
             self.botoes.append(Botao(c.RETANGULO_VOLTAR, '‹', ('voltar',)))
+        self.botoes.append(Botao(
+            c.RETANGULO_AUDIO, '', ('alternar_audio',),
+            icone='som' if estado.audio_ativado else 'som_bloqueado'))
         for botao in self.botoes:
             botao.desenhar(superficie, posicao_mouse)
 

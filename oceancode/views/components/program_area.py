@@ -131,6 +131,40 @@ class AreaProgramacao:
             return True, ('destino', None)
         return True, None
 
+    def calcular_blocos(self, estado):
+        if self.programa is not estado.comandos or self.desafio is not estado.desafio_selecionado:
+            self.cancelar_interacao()
+            self.programa = estado.comandos
+            self.desafio = estado.desafio_selecionado
+            self.rolagem = 0
+            self.ultimo_ativo = None
+        blocos = []
+        y = 8
+        for indice, comando in enumerate(estado.comandos):
+            altura = (72+max(32, len(comando.corpo)*PASSO_BLOCO+4)
+                      if comando.tipo == 'repetir' else ALTURA_BLOCO)
+            blocos.append((indice, comando, pygame.Rect(self.regiao.x+24, y, self.regiao.width-56, altura)))
+            y += altura+8
+        self.altura_conteudo = y+8
+        limite = max(0, self.altura_conteudo-self.regiao.height)
+        self.rolagem = max(0, min(self.rolagem, limite))
+        return blocos
+
+    def retangulo_interno(self, retangulo, interno):
+        return pygame.Rect(retangulo.x+32, retangulo.y+58+interno*PASSO_BLOCO,
+                           retangulo.width-44, ALTURA_BLOCO)
+
+    def mostrar_comando(self, estado, caminho):
+        alvo = self.calcular_blocos(estado)[caminho[0]][2]
+        if caminho[1] is not None:
+            alvo = self.retangulo_interno(alvo, caminho[1])
+        if alvo.y < self.rolagem:
+            self.rolagem = alvo.y
+        elif alvo.bottom > self.rolagem+self.regiao.height:
+            self.rolagem = alvo.bottom-self.regiao.height
+        limite = max(0, self.altura_conteudo-self.regiao.height)
+        self.rolagem = max(0, min(self.rolagem, limite))
+
     def comando(self, superficie, r, comando, caminho, estado):
         ativo = estado.comando_em_execucao == caminho
         desenhar_bloco(superficie, r, comando.tipo, ROTULOS[comando.tipo], ativo=ativo)
@@ -166,8 +200,7 @@ class AreaProgramacao:
             texto(superficie, f'{estado.repeticao_em_execucao}/{comando.quantidade}',
                   (r.right-52, r.y+29), 20, centralizado=True, peso='semibold')
         for interno, filho in enumerate(comando.corpo):
-            filho_rect = pygame.Rect(corpo.x+12, corpo.y+6+interno*PASSO_BLOCO,
-                                     corpo.width-24, ALTURA_BLOCO)
+            filho_rect = self.retangulo_interno(r, interno)
             self.comando(superficie, filho_rect, filho, (indice, interno), estado)
         for parte in ((r.x, r.y, r.width, 52), (r.x, corpo.y, 20, corpo.height),
                       (r.x, corpo.bottom, r.width, 20)):
@@ -176,36 +209,15 @@ class AreaProgramacao:
 
     def desenhar(self, superficie, estado, mouse):
         self.alvos = []
-        if self.programa is not estado.comandos or self.desafio is not estado.desafio_selecionado:
-            self.cancelar_interacao()
-            self.programa = estado.comandos
-            self.desafio = estado.desafio_selecionado
-            self.rolagem = 0
-            self.ultimo_ativo = None
+        blocos = self.calcular_blocos(estado)
         painel(superficie, c.RETANGULO_PROGRAMACAO)
         texto(superficie, 'ÁREA DE PROGRAMAÇÃO', (732, 132), 22, peso='semibold')
         texto(superficie, f'{estado.total_blocos}/{estado.desafio_selecionado.limite_comandos} blocos',
               (1110, 136), 18)
-        blocos = []
-        y = 8
-        for indice, comando in enumerate(estado.comandos):
-            altura = (72+max(32, len(comando.corpo)*PASSO_BLOCO+4)
-                      if comando.tipo == 'repetir' else ALTURA_BLOCO)
-            blocos.append((indice, comando, pygame.Rect(self.regiao.x+24, y, self.regiao.width-56, altura)))
-            y += altura+8
-        self.altura_conteudo = y+8
         limite = max(0, self.altura_conteudo-self.regiao.height)
-        self.rolagem = min(self.rolagem, limite)
         atual = estado.comando_em_execucao
         if atual is not None and atual != self.ultimo_ativo:
-            alvo = blocos[atual[0]][2].copy()
-            if atual[1] is not None:
-                alvo.y += 58+atual[1]*PASSO_BLOCO
-                alvo.height = ALTURA_BLOCO
-            if alvo.y < self.rolagem:
-                self.rolagem = alvo.y
-            elif alvo.bottom > self.rolagem+self.regiao.height:
-                self.rolagem = alvo.bottom-self.regiao.height
+            self.mostrar_comando(estado, atual)
         self.ultimo_ativo = atual
         recorte = superficie.get_clip()
         superficie.set_clip(self.regiao)

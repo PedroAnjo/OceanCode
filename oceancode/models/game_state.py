@@ -22,6 +22,7 @@ class EstadoJogo:
     nivel: int = 1
     musica_ativada: bool = True
     efeitos_ativados: bool = True
+    audio_ativado: bool = True
     partida_iniciada: bool = False
     mensagem: str = 'Adicione comandos para planejar sua rota.'
     posicao_submarino: tuple[int, int] = (0, 2)
