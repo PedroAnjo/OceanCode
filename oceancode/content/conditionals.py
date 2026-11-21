@@ -9,5 +9,5 @@ def criar_desafios_condicionais():
 
 
 def criar_missao_condicionais():
-    return Missao(3, 'Decisões no Abismo', 'Condicionais', 200,
-                  disponivel=False, desafios=criar_desafios_condicionais())
+    return Missao(4, 'Decisões no Abismo', 'Condicionais', 200,
+                  disponivel=False, desafios=criar_desafios_condicionais(), permite_repeticao=True)

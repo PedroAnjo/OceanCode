@@ -50,9 +50,3 @@ class ControladorAudio:
         except (pygame.error, OSError):
             pass
 
-    def atualizar_efeitos(self):
-        if not self.estado.efeitos_ativados and pygame.mixer.get_init():
-            try:
-                pygame.mixer.stop()
-            except (pygame.error, OSError):
-                pass

@@ -1,15 +1,18 @@
 import pygame
-from .button import Botao, texto, painel, seta, foguete, repetir
+from .button import Botao, fonte, texto, painel, seta, missil, repetir
+from .progress_bar import cadeado
 from ... import config as c
 
 
 ROTULOS = {'cima': 'Cima', 'baixo': 'Baixo', 'esquerda': 'Esquerda',
-           'direita': 'Direita', 'foguete': 'Foguete', 'repetir': 'Repetir'}
+           'direita': 'Direita', 'missil': 'Míssil', 'repetir': 'Repetir'}
 ALTURA_BLOCO = 46
 PASSO_BLOCO = 54
+INTERVALO_DUPLO_CLIQUE = 350
 
 
-def desenhar_bloco(superficie, retangulo, tipo, rotulo, habilitado=True, ativo=False, compacto=False):
+def desenhar_bloco(superficie, retangulo, tipo, rotulo, habilitado=True, ativo=False,
+                   compacto=False, bloqueado=False):
     r = pygame.Rect(retangulo)
     cor = c.COR_REPETICAO if tipo == 'repetir' else c.AMARELO
     if not habilitado:
@@ -21,8 +24,10 @@ def desenhar_bloco(superficie, retangulo, tipo, rotulo, habilitado=True, ativo=F
     pygame.draw.polygon(superficie, cor, pontos)
     pygame.draw.polygon(superficie, c.AZUL_ESCURO if ativo else c.BORDA, pontos, 3 if ativo else 2)
     centro = (r.centerx, r.y+27) if compacto else (r.x+26, r.centery)
-    if tipo == 'foguete':
-        foguete(superficie, centro)
+    if bloqueado:
+        cadeado(superficie, centro)
+    elif tipo == 'missil':
+        missil(superficie, centro)
     elif tipo == 'repetir':
         repetir(superficie, centro)
     else:
@@ -46,106 +51,152 @@ class AreaProgramacao:
         self.rolagem = 0
         self.altura_conteudo = 0
         self.programa = None
+        self.desafio = None
         self.ultimo_ativo = None
-        self.botoes = []
+        self.alvos = []
+        self.ultimo_clique = None
+        self.com_foco = True
+
+    def cancelar_interacao(self):
+        self.ultimo_clique = None
 
     def rolar(self, quantidade, posicao):
+        self.cancelar_interacao()
         if self.regiao.collidepoint(posicao):
             limite = max(0, self.altura_conteudo-self.regiao.height)
             self.rolagem = max(0, min(limite, self.rolagem-quantidade*40))
 
-    def area(self, retangulo, acao, habilitado, recortar=True):
-        r = pygame.Rect(retangulo)
-        if recortar:
-            r = r.clip(self.regiao)
+    def registrar_alvo(self, retangulo, tipo, caminho=None, comando=None):
+        r = pygame.Rect(retangulo).clip(self.regiao)
         if r.width and r.height:
-            self.botoes.append(AreaClique(r, '', acao, habilitado))
+            self.alvos.append({'retangulo': r, 'tipo': tipo, 'caminho': caminho, 'comando': comando})
 
-    def controle(self, superficie, retangulo, rotulo, acao, habilitado, mouse):
-        r = pygame.Rect(retangulo)
-        cor = c.BRANCO if habilitado else c.CINZA
-        if habilitado and r.collidepoint(mouse):
-            cor = c.AMARELO_HOVER
-        pygame.draw.rect(superficie, cor, r, border_radius=6)
-        pygame.draw.rect(superficie, c.AZUL_ESCURO, r, 1, border_radius=6)
-        texto(superficie, rotulo, r.center, 20, centralizado=True, peso='semibold')
-        self.area(r, acao, habilitado)
+    def alvo_em(self, posicao):
+        return next((alvo for alvo in self.alvos if alvo['retangulo'].collidepoint(posicao)), None)
 
-    def insercao(self, superficie, retangulo, rotulo, destino, estado, recortar=True):
-        r = pygame.Rect(retangulo)
-        selecionado = estado.destino_laco == destino and not estado.executando
-        pygame.draw.rect(superficie, c.BRANCO, r, border_radius=8)
-        pygame.draw.rect(superficie, c.AZUL_ESCURO if selecionado else c.BORDA, r,
-                         3 if selecionado else 1, border_radius=8)
-        texto(superficie, rotulo, r.center, 18, centralizado=True, peso='semibold',
-              largura_maxima=r.width-16)
-        self.area(r, ('destino', destino), not estado.executando, recortar)
+    def alvo_valido(self, alvo, estado):
+        if self.programa is not estado.comandos or self.desafio is not estado.desafio_selecionado:
+            return False
+        if alvo['tipo'] == 'fundo':
+            return True
+        indice, interno = alvo['caminho']
+        if not 0 <= indice < len(estado.comandos):
+            return False
+        comando = estado.comandos[indice]
+        if interno is not None:
+            if not 0 <= interno < len(comando.corpo):
+                return False
+            comando = comando.corpo[interno]
+        return comando is alvo['comando']
 
-    def comando(self, superficie, r, comando, caminho, estado, mouse):
-        ativo = estado.executando and estado.comando_em_execucao == caminho
+    def tratar_evento(self, evento, estado, ativa):
+        if evento.type == pygame.WINDOWFOCUSLOST:
+            self.com_foco = False
+            self.cancelar_interacao()
+        elif evento.type == pygame.WINDOWFOCUSGAINED:
+            self.com_foco = True
+        elif evento.type == pygame.WINDOWLEAVE:
+            self.cancelar_interacao()
+
+        editavel = ativa and self.com_foco and not estado.executando and not estado.tipo_resultado
+        if not editavel:
+            self.cancelar_interacao()
+        if evento.type == pygame.MOUSEWHEEL and ativa and self.com_foco:
+            posicao = pygame.mouse.get_pos()
+            self.rolar(evento.y, posicao)
+            return self.regiao.collidepoint(posicao), None
+        if not editavel or evento.type != pygame.MOUSEBUTTONDOWN:
+            return False, None
+
+        anterior = self.ultimo_clique
+        self.cancelar_interacao()
+        if evento.button != 1:
+            return False, None
+        alvo = self.alvo_em(evento.pos)
+        if alvo is None:
+            return False, None
+        if not self.alvo_valido(alvo, estado):
+            return True, None
+        if alvo['tipo'] == 'numero':
+            return True, ('quantidade', alvo['caminho'][0])
+        if alvo['tipo'] in ('comando', 'laco'):
+            agora = pygame.time.get_ticks()
+            if (anterior is not None and anterior[0] is alvo['comando']
+                    and 0 <= agora - anterior[1] <= INTERVALO_DUPLO_CLIQUE):
+                return True, ('remover', *alvo['caminho'])
+            self.ultimo_clique = (alvo['comando'], agora)
+        if alvo['tipo'] in ('laco', 'corpo'):
+            return True, ('destino', alvo['caminho'][0])
+        if alvo['tipo'] == 'fundo':
+            return True, ('destino', None)
+        return True, None
+
+    def comando(self, superficie, r, comando, caminho, estado):
+        ativo = estado.comando_em_execucao == caminho
         desenhar_bloco(superficie, r, comando.tipo, ROTULOS[comando.tipo], ativo=ativo)
-        self.controle(superficie, (r.right-34, r.y+10, 26, 26), '×',
-                      ('remover', *caminho), not estado.executando, mouse)
+        self.registrar_alvo(r, 'comando', caminho, comando)
 
     def laco(self, superficie, r, comando, indice, estado, mouse):
-        selecionado = estado.destino_laco == indice and not estado.executando
-        ativo = (estado.executando and estado.comando_em_execucao is not None
+        editavel = not estado.executando and not estado.tipo_resultado
+        selecionado = estado.destino_laco == indice and editavel
+        cor = c.COR_REPETICAO_SELECIONADA if selecionado else c.COR_REPETICAO
+        ativo = (estado.comando_em_execucao is not None
                  and estado.comando_em_execucao[0] == indice)
         corpo = pygame.Rect(r.x+20, r.y+52, r.width-20, r.height-72)
-        pygame.draw.rect(superficie, c.BRANCO if selecionado else c.SUAVE, corpo)
+        pygame.draw.rect(superficie, c.SUAVE, corpo)
         pontos = [(r.x, r.y+5), (r.x+18, r.y+5), (r.x+23, r.y+10),
                   (r.x+43, r.y+10), (r.x+48, r.y+5), (r.right, r.y+5),
                   (r.right, corpo.y), (corpo.x, corpo.y), (corpo.x, corpo.bottom),
                   (r.right, corpo.bottom), (r.right, r.bottom-5),
                   (r.x+48, r.bottom-5), (r.x+43, r.bottom),
                   (r.x+23, r.bottom), (r.x+18, r.bottom-5), (r.x, r.bottom-5)]
-        pygame.draw.polygon(superficie, c.COR_REPETICAO, pontos)
+        pygame.draw.polygon(superficie, cor, pontos)
         pygame.draw.polygon(superficie, c.AZUL_ESCURO if ativo else c.BORDA_REPETICAO,
                             pontos, 3 if ativo else 2)
         repetir(superficie, (r.x+27, r.y+29))
-        texto(superficie, f'Repetir {comando.quantidade} vezes', (r.x+50, r.y+17), 20,
-              peso='semibold', largura_maxima=r.width-220)
+        texto(superficie, 'Repetir', (r.x+50, r.y+17), 20, peso='semibold')
+        numero = pygame.Rect(r.x+50+fonte(20, 'semibold').size('Repetir ')[0], r.y+14, 30, 30)
+        pygame.draw.rect(superficie, cor, numero, border_radius=6)
+        borda = c.AZUL_ESCURO if editavel and numero.collidepoint(mouse) else c.BORDA_REPETICAO
+        pygame.draw.rect(superficie, borda, numero, 1, border_radius=6)
+        texto(superficie, comando.quantidade, numero.center, 20, centralizado=True, peso='semibold')
+        texto(superficie, 'vezes', (numero.right+6, r.y+17), 20, peso='semibold')
+        self.registrar_alvo(numero, 'numero', (indice, None), comando)
         if ativo:
             texto(superficie, f'{estado.repeticao_em_execucao}/{comando.quantidade}',
-                  (r.right-160, r.y+29), 20, centralizado=True, peso='semibold')
-        for deslocamento, rotulo, ajuste in [(130, '−', -1), (92, '+', 1)]:
-            habilitado = not estado.executando and 1 <= comando.quantidade+ajuste <= 9
-            self.controle(superficie, (r.right-deslocamento, r.y+14, 30, 30), rotulo,
-                          ('quantidade', indice, ajuste), habilitado, mouse)
-        self.controle(superficie, (r.right-34, r.y+16, 26, 26), '×',
-                      ('remover', indice, None), not estado.executando, mouse)
-        if selecionado:
-            pygame.draw.rect(superficie, c.AZUL_ESCURO, corpo, 2)
+                  (r.right-52, r.y+29), 20, centralizado=True, peso='semibold')
         for interno, filho in enumerate(comando.corpo):
             filho_rect = pygame.Rect(corpo.x+12, corpo.y+6+interno*PASSO_BLOCO,
                                      corpo.width-24, ALTURA_BLOCO)
-            self.comando(superficie, filho_rect, filho, (indice, interno), estado, mouse)
-        insercao = pygame.Rect(corpo.x+12, corpo.bottom-42, corpo.width-24, 34)
-        rotulo = 'Adicionar neste laço' if comando.corpo else 'Adicionar comandos aqui'
-        self.insercao(superficie, insercao, rotulo, indice, estado)
-        self.area(corpo, ('destino', indice), not estado.executando)
+            self.comando(superficie, filho_rect, filho, (indice, interno), estado)
+        for parte in ((r.x, r.y, r.width, 52), (r.x, corpo.y, 20, corpo.height),
+                      (r.x, corpo.bottom, r.width, 20)):
+            self.registrar_alvo(parte, 'laco', (indice, None), comando)
+        self.registrar_alvo(corpo, 'corpo', (indice, None), comando)
 
     def desenhar(self, superficie, estado, mouse):
-        self.botoes = []
-        if self.programa is not estado.comandos:
+        self.alvos = []
+        if self.programa is not estado.comandos or self.desafio is not estado.desafio_selecionado:
+            self.cancelar_interacao()
             self.programa = estado.comandos
+            self.desafio = estado.desafio_selecionado
             self.rolagem = 0
+            self.ultimo_ativo = None
         painel(superficie, c.RETANGULO_PROGRAMACAO)
         texto(superficie, 'ÁREA DE PROGRAMAÇÃO', (732, 132), 22, peso='semibold')
         texto(superficie, f'{estado.total_blocos}/{estado.desafio_selecionado.limite_comandos} blocos',
               (1110, 136), 18)
-        self.insercao(superficie, (740, 164, 450, 32), 'Adicionar na sequência', None,
-                      estado, recortar=False)
         blocos = []
         y = 8
         for indice, comando in enumerate(estado.comandos):
-            altura = 122+len(comando.corpo)*PASSO_BLOCO if comando.tipo == 'repetir' else ALTURA_BLOCO
-            blocos.append((indice, comando, pygame.Rect(self.regiao.x+8, y, 450, altura)))
+            altura = (72+max(32, len(comando.corpo)*PASSO_BLOCO+4)
+                      if comando.tipo == 'repetir' else ALTURA_BLOCO)
+            blocos.append((indice, comando, pygame.Rect(self.regiao.x+24, y, self.regiao.width-56, altura)))
             y += altura+8
-        self.altura_conteudo = y+50
+        self.altura_conteudo = y+8
         limite = max(0, self.altura_conteudo-self.regiao.height)
         self.rolagem = min(self.rolagem, limite)
-        atual = estado.comando_em_execucao if estado.executando else None
+        atual = estado.comando_em_execucao
         if atual is not None and atual != self.ultimo_ativo:
             alvo = blocos[atual[0]][2].copy()
             if atual[1] is not None:
@@ -163,9 +214,8 @@ class AreaProgramacao:
             if comando.tipo == 'repetir':
                 self.laco(superficie, r, comando, indice, estado, mouse)
             else:
-                self.comando(superficie, r, comando, (indice, None), estado, mouse)
-        self.insercao(superficie, (740, self.regiao.y+y-self.rolagem, 450, 34),
-                      'Adicionar na sequência', None, estado)
+                self.comando(superficie, r, comando, (indice, None), estado)
+        self.registrar_alvo(self.regiao, 'fundo')
         superficie.set_clip(recorte)
         if limite:
             trilho = pygame.Rect(1204, self.regiao.y, 8, self.regiao.height)
@@ -173,12 +223,3 @@ class AreaProgramacao:
             altura = max(24, self.regiao.height*self.regiao.height//self.altura_conteudo)
             topo = trilho.y+round((trilho.height-altura)*self.rolagem/limite)
             pygame.draw.rect(superficie, c.AZUL_ESCURO, (trilho.x, topo, 8, altura), border_radius=4)
-        if estado.executando:
-            rotulo = 'Executando • edição bloqueada'
-            if atual is not None and atual[1] is not None:
-                quantidade = estado.comandos[atual[0]].quantidade
-                rotulo = f'Repetição {estado.repeticao_em_execucao}/{quantidade} • edição bloqueada'
-        else:
-            destino = 'Adicionar na sequência' if estado.destino_laco is None else 'Adicionar neste laço'
-            rotulo = f'{destino} • role para ver mais • × remove'
-        texto(superficie, rotulo, (740, 561), 16, largura_maxima=470)

@@ -1,4 +1,3 @@
-﻿import pygame
 from .components.button import Botao, texto, painel
 from .components.ocean_background import FundoOceanico
 from .components.progress_bar import barra_progresso, estrela
@@ -31,7 +30,6 @@ class ViewBase:
     def finalizar(self, superficie, estado, posicao_mouse, voltar=True):
         if voltar:
             self.botoes.append(Botao(c.RETANGULO_VOLTAR, '‹', ('voltar',)))
-        self.botoes.append(Botao(c.RETANGULO_MENU, 'Menu', ('abrir_menu',)))
         for botao in self.botoes:
             botao.desenhar(superficie, posicao_mouse)
 

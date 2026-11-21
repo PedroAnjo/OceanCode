@@ -13,4 +13,5 @@ class BotaoDesafio(Botao):
         if self.desafio.status == StatusDesafio.CONCLUIDO:
             x,y = self.retangulo.right-28, self.retangulo.y+18
             pygame.draw.lines(superficie, c.AZUL_ESCURO, False, [(x-8,y),(x-2,y+6),(x+9,y-7)], 3)
-        texto(superficie, self.desafio.status.value, (self.retangulo.centerx,self.retangulo.bottom+20), 17, centralizado=True)
+        rotulo = self.desafio.status.value if self.desafio.implementado else 'Em breve'
+        texto(superficie, rotulo, (self.retangulo.centerx,self.retangulo.bottom+20), 17, centralizado=True)

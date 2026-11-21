@@ -22,7 +22,10 @@ class PastaMissao(Botao):
         texto(superficie, f'MISSÃO {missao.numero:02}', (x+24,y+16), 16, peso='semibold')
         texto(superficie, missao.nome, (x+24,y+43), 28, peso='semibold',
               largura_maxima=retangulo.width-48)
-        texto(superficie, missao.conteudo, (x+24,y+82), 20)
+        conteudo = missao.conteudo
+        if not any(desafio.implementado for desafio in missao.desafios):
+            conteudo += ' • Em breve'
+        texto(superficie, conteudo, (x+24,y+82), 20)
         estrelas_missao(superficie, (retangulo.right-78,y+94), missao.concluidos,total)
         texto(superficie, 'PROGRESSO', (x+24,y+117), 14, peso='semibold')
         barra_progresso(superficie, (x+24,y+144,retangulo.width-130,16),

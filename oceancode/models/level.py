@@ -8,9 +8,9 @@ class StatusDesafio(Enum):
 
 class TipoDesafio(Enum):
     SEQUENCIA = 'Sequência'
-    CONDICIONAIS = 'Condicionais'
     REPETICAO = 'Repetição'
     DEPURACAO = 'Depuração'
+    CONDICIONAIS = 'Condicionais'
 
 @dataclass
 class Desafio:
@@ -25,6 +25,12 @@ class Desafio:
     recompensa_xp: int = 0
     implementado: bool = False
     tipo: TipoDesafio = TipoDesafio.SEQUENCIA
+    monstros: tuple[tuple[int, int], ...] = ()
+    posicoes_objetivos: tuple[tuple[int, int], ...] = ()
+
+    @property
+    def objetivos(self):
+        return self.posicoes_objetivos or (self.posicao_objetivo,)
 
     @property
     def jogavel(self):

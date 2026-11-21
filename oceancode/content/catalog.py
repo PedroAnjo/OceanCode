@@ -8,6 +8,6 @@ from .sequence import criar_missao_sequencia
 def criar_missoes():
     return (
         criar_missao_sequencia(),
+        criar_missao_repeticao(),
         criar_missao_depuracao(),
-        criar_missao_condicionais(),
-        criar_missao_repeticao())
+        criar_missao_condicionais())

@@ -2,6 +2,7 @@
 from ..content.catalog import criar_missoes
 from .mission import Missao
 from .level import Desafio, StatusDesafio
+from .monster import Monstro
 
 @dataclass
 class Comando:
@@ -25,9 +26,10 @@ class EstadoJogo:
     mensagem: str = 'Adicione comandos para planejar sua rota.'
     posicao_submarino: tuple[int, int] = (0, 2)
     orientacao_submarino: str = 'direita'
-    obstaculos_restantes: set[tuple[int, int]] = field(default_factory=set)
-    trajeto_foguete: tuple[tuple[int, int], tuple[int, int]] | None = None
-    impacto_foguete: bool = False
+    monstros_restantes: list[Monstro] = field(default_factory=list)
+    objetivos_restantes: set[tuple[int, int]] = field(default_factory=set)
+    trajeto_missil: tuple[tuple[int, int], tuple[int, int]] | None = None
+    impacto_missil: str | None = None
     executando: bool = False
     indice_comando: int = 0
     indice_interno: int = 0
@@ -35,6 +37,7 @@ class EstadoJogo:
     comando_em_execucao: tuple[int, int | None] | None = None
     repeticao_em_execucao: int = 0
     tempo_acumulado: float = 0
+    tempo_resultado_ms: float = 0
     tipo_resultado: str | None = None
     mensagem_resultado: str = ''
     xp_recebido: int = 0
@@ -43,6 +46,10 @@ class EstadoJogo:
     @property
     def total_blocos(self):
         return sum(1 + len(comando.corpo) for comando in self.comandos)
+
+    @property
+    def permite_repeticao(self):
+        return bool(self.missao_selecionada and self.missao_selecionada.permite_repeticao)
 
     @property
     def desafios_concluidos(self):
@@ -59,12 +66,17 @@ class EstadoJogo:
         self.reiniciar_desafio()
         concluidos = set(concluidos)
         for missao in self.missoes:
-            if not missao.disponivel:
-                continue
             for desafio in missao.desafios:
-                if desafio.implementado and (missao.numero, desafio.numero) in concluidos:
+                if (missao.numero, desafio.numero) in concluidos:
                     desafio.status = StatusDesafio.CONCLUIDO
+        self.atualizar_desbloqueios()
+
+    def atualizar_desbloqueios(self):
+        anterior_concluida = True
+        for missao in self.missoes:
+            missao.disponivel = anterior_concluida
             missao.atualizar_desbloqueios()
+            anterior_concluida = missao.disponivel and missao.concluida
 
     def reiniciar_desafio(self, preservar_comandos=False):
         if not preservar_comandos:
@@ -73,10 +85,12 @@ class EstadoJogo:
         self.posicao_submarino = (self.desafio_selecionado.posicao_inicial
                                   if self.desafio_selecionado else (0, 2))
         self.orientacao_submarino = 'direita'
-        self.obstaculos_restantes = (set(self.desafio_selecionado.obstaculos)
-                                     if self.desafio_selecionado else set())
-        self.trajeto_foguete = None
-        self.impacto_foguete = False
+        self.monstros_restantes = ([Monstro(posicao) for posicao in self.desafio_selecionado.monstros]
+                                   if self.desafio_selecionado else [])
+        self.objetivos_restantes = (set(self.desafio_selecionado.objetivos)
+                                    if self.desafio_selecionado else set())
+        self.trajeto_missil = None
+        self.impacto_missil = None
         self.executando = False
         self.indice_comando = 0
         self.indice_interno = 0
@@ -84,6 +98,7 @@ class EstadoJogo:
         self.comando_em_execucao = None
         self.repeticao_em_execucao = 0
         self.tempo_acumulado = 0
+        self.tempo_resultado_ms = 0
         self.tipo_resultado = None
         self.mensagem_resultado = ''
         self.xp_recebido = 0

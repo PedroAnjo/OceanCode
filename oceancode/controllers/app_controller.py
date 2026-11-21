@@ -1,7 +1,6 @@
 import pygame
 from .. import config as c
 from ..views.components.button import fonte
-from ..views.components.options_menu import MenuOpcoes
 from ..views.components.new_game_confirmation import ConfirmacaoNovaPartida
 from ..views.components.tutorial_panel import PainelTutorial
 from ..models.game_state import EstadoJogo
@@ -26,15 +25,12 @@ class ControladorAplicacao:
         self.estado = EstadoJogo()
         self.persistencia = PersistenciaJogo(caminho_banco)
         self.mensagem_persistencia = ''
-        self.mensagem_audio = ''
         self.carregar_dados_iniciais()
         self.audio = ControladorAudio(self.estado)
         self.navegacao = ControladorNavegacao(self.estado)
         self.jogo = ControladorJogo(self.estado)
         self.telas = {'inicio':ViewInicio(),'missoes':ViewMissoes(),'desafios':ViewDesafios(),
                       'jogo':ViewJogo(),'retorno':ViewRetorno()}
-        self.menu = MenuOpcoes()
-        self.menu_aberto = False
         self.confirmacao = ConfirmacaoNovaPartida()
         self.confirmacao_aberta = False
         self.tutorial = PainelTutorial()
@@ -44,7 +40,7 @@ class ControladorAplicacao:
 
     @property
     def sobreposicao_aberta(self):
-        return self.menu_aberto or self.confirmacao_aberta or self.tutorial_aberto
+        return self.confirmacao_aberta or self.tutorial_aberto
 
     def carregar_dados_iniciais(self):
         try:
@@ -78,7 +74,6 @@ class ControladorAplicacao:
             return
         self.estado.aplicar_progresso()
         self.confirmacao_aberta = False
-        self.menu_aberto = False
         self.mensagem_persistencia = ''
         self.navegacao.ativa = 'missoes'
 
@@ -105,22 +100,8 @@ class ControladorAplicacao:
         self.estado.partida_iniciada = True
         self.mensagem_persistencia = ''
 
-    def alterar_preferencia(self, tipo):
-        musica = not self.estado.musica_ativada if tipo == 'musica' else self.estado.musica_ativada
-        efeitos = not self.estado.efeitos_ativados if tipo == 'efeitos' else self.estado.efeitos_ativados
-        try:
-            self.persistencia.salvar_preferencias(musica, efeitos)
-        except ErroPersistencia:
-            self.mensagem_audio = 'Não foi possível salvar o áudio. A opção anterior foi mantida.'
-            return
-        self.mensagem_audio = ''
-        self.estado.musica_ativada, self.estado.efeitos_ativados = musica, efeitos
-        if tipo == 'musica':
-            self.audio.atualizar_musica()
-        else:
-            self.audio.atualizar_efeitos()
-
     def tratar_acao(self, acao):
+        tela_anterior = self.navegacao.ativa
         tipo,*argumentos = acao
         if tipo == 'sair':
             self.em_execucao = False
@@ -136,23 +117,11 @@ class ControladorAplicacao:
             self.navegacao.voltar()
             if self.navegacao.ativa == 'inicio':
                 self.atualizar_disponibilidade()
-        elif tipo == 'abrir_menu':
-            self.menu_aberto = True
-        elif tipo == 'fechar_menu':
-            self.menu_aberto = False
         elif tipo == 'abrir_tutorial':
-            self.menu_aberto = False
             self.tutorial.rolagem = 0
             self.tutorial_aberto = True
         elif tipo == 'fechar_tutorial':
             self.tutorial_aberto = False
-            self.menu_aberto = False
-        elif tipo == 'voltar_inicio':
-            self.menu_aberto = False
-            self.navegacao.voltar_inicio()
-            self.atualizar_disponibilidade()
-        elif tipo in ('musica', 'efeitos'):
-            self.alterar_preferencia(tipo)
         elif tipo == 'missao':
             self.navegacao.selecionar_missao(argumentos[0])
         elif tipo == 'desafio':
@@ -168,11 +137,28 @@ class ControladorAplicacao:
                 self.navegacao.selecionar_desafio(proximo.numero)
         elif self.navegacao.ativa == 'jogo':
             self.jogo.tratar_acao(acao)
+        if tela_anterior == 'jogo' and (self.navegacao.ativa != 'jogo' or not self.em_execucao):
+            self.estado.executando = False
+            self.estado.tempo_resultado_ms = 0
+            self.estado.tipo_resultado = None
+        if (self.navegacao.ativa != tela_anterior or self.sobreposicao_aberta
+                or self.estado.executando or not self.em_execucao):
+            self.telas['jogo'].programacao.cancelar_interacao()
 
     def tratar_evento(self, evento):
+        programacao = self.telas['jogo'].programacao
         if evento.type == pygame.QUIT:
-            self.em_execucao = False
-        elif self.tutorial_aberto:
+            self.tratar_acao(('sair',))
+            return
+        consumido, acao = programacao.tratar_evento(
+            evento, self.estado, self.navegacao.ativa == 'jogo' and not self.sobreposicao_aberta)
+        if consumido:
+            if acao is not None:
+                self.tratar_acao(acao)
+                self.audio.tocar_clique()
+            self.desenhar()
+            return
+        if self.tutorial_aberto:
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_ESCAPE:
                     self.tratar_acao(('fechar_tutorial',))
@@ -193,23 +179,15 @@ class ControladorAplicacao:
                         self.audio.tocar_clique()
                         break
             self.desenhar()
-        elif (evento.type == pygame.MOUSEWHEEL and self.navegacao.ativa == 'jogo'
-              and not self.sobreposicao_aberta):
-            self.telas['jogo'].programacao.rolar(evento.y, pygame.mouse.get_pos())
-            self.desenhar()
         elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if self.confirmacao_aberta:
                 self.confirmacao_aberta = False
-            elif self.menu_aberto:
-                self.menu_aberto = False
             else:
                 self.tratar_acao(('voltar',))
             self.desenhar()
         elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             if self.confirmacao_aberta:
                 botoes = self.confirmacao.botoes
-            elif self.menu_aberto:
-                botoes = self.menu.botoes
             else:
                 botoes = self.telas[self.navegacao.ativa].botoes
             for botao in botoes:
@@ -220,14 +198,16 @@ class ControladorAplicacao:
             self.desenhar()
 
     def atualizar(self, tempo_decorrido):
-        if self.sobreposicao_aberta:
+        if not self.em_execucao or self.sobreposicao_aberta or self.navegacao.ativa != 'jogo':
             return
-        if self.navegacao.ativa == 'jogo':
-            self.jogo.atualizar(tempo_decorrido)
-            if self.estado.tipo_resultado:
-                if self.estado.tipo_resultado == 'sucesso':
-                    self.salvar_progresso()
+        if self.estado.tipo_resultado:
+            self.estado.tempo_resultado_ms += tempo_decorrido * 1000
+            if self.estado.tempo_resultado_ms >= c.PAUSA_RESULTADO_MS:
                 self.navegacao.ativa = 'retorno'
+            return
+        self.jogo.atualizar(tempo_decorrido)
+        if self.estado.tipo_resultado == 'sucesso':
+            self.salvar_progresso()
 
     def desenhar(self):
         posicao_mouse = pygame.mouse.get_pos()
@@ -238,12 +218,8 @@ class ControladorAplicacao:
             self.tutorial.desenhar(self.superficie, posicao_mouse)
         elif self.confirmacao_aberta:
             self.confirmacao.desenhar(self.superficie, posicao_mouse)
-        elif self.menu_aberto:
-            self.menu.desenhar(self.superficie, self.estado, posicao_mouse,
-                               tela_inicial=self.navegacao.ativa == 'inicio')
-        aviso = self.mensagem_audio or self.mensagem_persistencia
-        if aviso:
-            self.telas[self.navegacao.ativa].desenhar_aviso(self.superficie, aviso)
+        if self.mensagem_persistencia:
+            self.telas[self.navegacao.ativa].desenhar_aviso(self.superficie, self.mensagem_persistencia)
 
     def executar(self):
         try:

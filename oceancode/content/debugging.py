@@ -9,5 +9,5 @@ def criar_desafios_depuracao():
 
 
 def criar_missao_depuracao():
-    return Missao(2, 'Rotas Perigosas', 'Depuração', 150,
-                  disponivel=False, desafios=criar_desafios_depuracao())
+    return Missao(3, 'Rotas Perigosas', 'Depuração', 150,
+                  disponivel=False, desafios=criar_desafios_depuracao(), permite_repeticao=True)

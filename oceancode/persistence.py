@@ -41,6 +41,19 @@ class PersistenciaJogo:
                 musica_ativada INTEGER NOT NULL CHECK (musica_ativada IN (0, 1)),
                 efeitos_ativados INTEGER NOT NULL CHECK (efeitos_ativados IN (0, 1)))''')
             conexao.execute('INSERT OR IGNORE INTO preferencias VALUES (1, ?, ?)', (1, 1))
+            self._migrar_ordem_missoes(conexao)
+
+    def _migrar_ordem_missoes(self, conexao):
+        if conexao.execute('PRAGMA user_version').fetchone()[0] >= 1:
+            return
+        # Numeração anterior: 2 = depuração, 3 = condicionais, 4 = repetição.
+        numeros = {2: 3, 3: 4, 4: 2}
+        concluidos = conexao.execute('''SELECT missao, desafio FROM desafios_concluidos
+            WHERE missao IN (2, 3, 4)''').fetchall()
+        conexao.execute('DELETE FROM desafios_concluidos WHERE missao IN (2, 3, 4)')
+        conexao.executemany('INSERT INTO desafios_concluidos VALUES (?, ?)',
+                            [(numeros[missao], desafio) for missao, desafio in concluidos])
+        conexao.execute('PRAGMA user_version = 1')
 
     def existe_salvamento(self):
         with self._conexao() as conexao:

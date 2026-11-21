@@ -37,10 +37,10 @@ def seta(superficie, direcao, centro, cor=c.AZUL_ESCURO):
     pygame.draw.polygon(superficie, cor, [(x + px, y + py) for px, py in pontos])
 
 @lru_cache(maxsize=1)
-def imagem_foguete():
-    if c.IMAGEM_FOGUETE.is_file():
+def imagem_missil():
+    if c.IMAGEM_MISSIL.is_file():
         try:
-            imagem = pygame.image.load(str(c.IMAGEM_FOGUETE)).convert_alpha()
+            imagem = pygame.image.load(str(c.IMAGEM_MISSIL)).convert_alpha()
             proporcao = min(32 / imagem.get_width(), 34 / imagem.get_height())
             return pygame.transform.smoothscale(imagem, (max(1, round(imagem.get_width() * proporcao)),
                                                          max(1, round(imagem.get_height() * proporcao))))
@@ -49,8 +49,8 @@ def imagem_foguete():
     return None
 
 
-def foguete(superficie, centro):
-    imagem = imagem_foguete()
+def missil(superficie, centro):
+    imagem = imagem_missil()
     if imagem is not None:
         superficie.blit(imagem, imagem.get_rect(center=centro))
         return
@@ -97,9 +97,9 @@ class Botao:
         if self.habilitado and self.retangulo.collidepoint(posicao_mouse):
             cor = c.AMARELO_PRESSIONADO if pygame.mouse.get_pressed()[0] else c.AMARELO_HOVER
         painel(superficie, self.retangulo, cor)
-        if self.icone == 'foguete':
+        if self.icone == 'missil':
             centro = (self.retangulo.x + 28, self.retangulo.centery) if self.rotulo else self.retangulo.center
-            foguete(superficie, centro)
+            missil(superficie, centro)
             if self.rotulo:
                 texto(superficie, self.rotulo, (self.retangulo.centerx + 20, self.retangulo.centery),
                       centralizado=True, peso='semibold', largura_maxima=self.retangulo.width - 72)
