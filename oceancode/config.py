@@ -45,6 +45,7 @@ RETANGULO_AUDIO = (1170, 646, 64, 64)
 PASTA_IMAGENS = Path(__file__).parent / 'assets/images'
 IMAGEM_FUNDO = PASTA_IMAGENS / 'tabuleiro_oceano.png'
 IMAGEM_LOGO = PASTA_IMAGENS / 'logo.png'
+IMAGEM_ICONE = PASTA_IMAGENS / 'icone.png'
 IMAGEM_MISSIL = PASTA_IMAGENS / 'missil.png'
 IMAGEM_MONSTRO = PASTA_IMAGENS / 'monstro.png'
 IMAGEM_REPETIR = PASTA_IMAGENS / 'repetir.png'

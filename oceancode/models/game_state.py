@@ -3,13 +3,7 @@ from ..content.catalog import criar_missoes
 from .mission import Missao
 from .level import Desafio, StatusDesafio
 from .monster import Monstro
-
-@dataclass
-class Comando:
-    tipo: str
-    quantidade: int = 2
-    corpo: list['Comando'] = field(default_factory=list)
-
+from .command import Comando, copiar_programa
 
 @dataclass
 class EstadoJogo:
@@ -18,6 +12,8 @@ class EstadoJogo:
     desafio_selecionado: Desafio | None = None
     comandos: list[Comando] = field(default_factory=list)
     destino_laco: int | None = None
+    comando_selecionado: tuple[int, int | None] | None = None
+    inserir_em: tuple[int, int | None] | None = None
     xp: int = 0
     nivel: int = 1
     musica_ativada: bool = True
@@ -46,6 +42,7 @@ class EstadoJogo:
 
     @property
     def total_blocos(self):
+        """Conta o laço e seus comandos internos uma única vez cada."""
         return sum(1 + len(comando.corpo) for comando in self.comandos)
 
     @property
@@ -80,9 +77,14 @@ class EstadoJogo:
             anterior_concluida = missao.disponivel and missao.concluida
 
     def reiniciar_desafio(self, preservar_comandos=False):
+        # A cópia mantém o programa inicial imutável durante a edição.
         if not preservar_comandos:
-            self.comandos = []
+            programa_inicial = (self.desafio_selecionado.programa_inicial
+                                if self.desafio_selecionado else ())
+            self.comandos = copiar_programa(programa_inicial)
         self.destino_laco = None
+        self.comando_selecionado = None
+        self.inserir_em = None
         self.posicao_submarino = (self.desafio_selecionado.posicao_inicial
                                   if self.desafio_selecionado else (0, 2))
         self.orientacao_submarino = 'direita'
@@ -105,3 +107,7 @@ class EstadoJogo:
         self.xp_recebido = 0
         self.proximo_disponivel = False
         self.mensagem = 'Adicione comandos para planejar sua rota.'
+
+    def restaurar_programa(self):
+        self.reiniciar_desafio(preservar_comandos=False)
+        self.mensagem = 'Programa inicial restaurado.'

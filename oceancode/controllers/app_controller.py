@@ -1,3 +1,4 @@
+import os
 import pygame
 from .. import config as c
 from ..views.components.button import fonte
@@ -14,9 +15,32 @@ from .navigation_controller import ControladorNavegacao
 from .game_controller import ControladorJogo
 from .audio_controller import ControladorAudio
 
+
+def _configurar_identidade_windows():
+    if os.name != 'nt':
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('OceanCode.OceanCode')
+    except (AttributeError, OSError):
+        pass
+
+
+def _configurar_icone():
+    for caminho in (c.IMAGEM_ICONE, c.IMAGEM_LOGO):
+        try:
+            imagem = pygame.image.load(str(caminho))
+            pygame.display.set_icon(imagem)
+            return
+        except (pygame.error, OSError):
+            continue
+
+
 class ControladorAplicacao:
     def __init__(self, caminho_banco=None):
         pygame.display.init()
+        _configurar_identidade_windows()
+        _configurar_icone()
         pygame.font.init()
         fonte.cache_clear()
         self.superficie = pygame.display.set_mode((c.LARGURA,c.ALTURA))

@@ -1,5 +1,6 @@
 ﻿from dataclasses import dataclass
 from enum import Enum
+from .command import Comando
 
 class StatusDesafio(Enum):
     CONCLUIDO = 'Concluído'
@@ -27,6 +28,7 @@ class Desafio:
     tipo: TipoDesafio = TipoDesafio.SEQUENCIA
     monstros: tuple[tuple[int, int], ...] = ()
     posicoes_objetivos: tuple[tuple[int, int], ...] = ()
+    programa_inicial: tuple[Comando, ...] = ()
 
     @property
     def objetivos(self):

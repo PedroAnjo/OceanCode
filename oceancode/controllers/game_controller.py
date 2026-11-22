@@ -1,6 +1,6 @@
 ﻿from .. import config as c
-from ..models.level import StatusDesafio
-from ..models.game_state import Comando
+from ..models.level import StatusDesafio, TipoDesafio
+from ..models.command import Comando
 
 DIRECOES = {'cima': (0, -1), 'baixo': (0, 1), 'esquerda': (-1, 0), 'direita': (1, 0)}
 
@@ -15,6 +15,32 @@ class ControladorJogo:
         tipo, *argumentos = acao
         if tipo == 'comando' and argumentos[0] in (*DIRECOES, 'missil', 'repetir'):
             comando = argumentos[0]
+            if estado.inserir_em is not None:
+                indice, interno = estado.inserir_em
+                if 0 <= indice < len(estado.comandos):
+                    destino = estado.comandos[indice]
+                    lista = destino.corpo if interno is not None else estado.comandos
+                    posicao = interno if interno is not None else indice
+                    if (0 <= posicao <= len(lista)
+                            and not (interno is not None and comando == 'repetir')):
+                        lista.insert(posicao, Comando(comando))
+                        estado.inserir_em = None
+                        estado.mensagem = 'Comando inserido.'
+                        return (indice, interno)
+            if estado.comando_selecionado is not None:
+                indice, interno = estado.comando_selecionado
+                if 0 <= indice < len(estado.comandos):
+                    destino = estado.comandos[indice]
+                    if interno is not None and 0 <= interno < len(destino.corpo):
+                        destino.corpo[interno] = Comando(comando)
+                        estado.comando_selecionado = None
+                        estado.mensagem = 'Comando substituído.'
+                        return (indice, interno)
+                    if interno is None and destino.tipo != 'repetir':
+                        estado.comandos[indice] = Comando(comando)
+                        estado.comando_selecionado = None
+                        estado.mensagem = 'Comando substituído.'
+                        return (indice, None)
             if (comando == 'repetir' or estado.destino_laco is not None) and not estado.permite_repeticao:
                 estado.mensagem = 'Repetir fica disponível a partir da missão de Repetição.'
                 return
@@ -37,6 +63,8 @@ class ControladorJogo:
                     else (estado.destino_laco, len(destino) - 1))
         elif tipo == 'destino':
             indice = argumentos[0]
+            estado.comando_selecionado = None
+            estado.inserir_em = None
             if indice is None or (estado.permite_repeticao and 0 <= indice < len(estado.comandos)
                                   and estado.comandos[indice].tipo == 'repetir'):
                 estado.destino_laco = indice
@@ -60,15 +88,48 @@ class ControladorJogo:
                     elif estado.destino_laco is not None and indice < estado.destino_laco:
                         estado.destino_laco -= 1
         elif tipo == 'limpar':
-            estado.comandos = []
-            estado.destino_laco = None
-            estado.mensagem = 'Sequência limpa. Planeje uma nova rota.'
+            if estado.desafio_selecionado.tipo == TipoDesafio.DEPURACAO:
+                estado.restaurar_programa()
+            else:
+                estado.comandos = []
+                estado.destino_laco = None
+                estado.mensagem = 'Sequência limpa. Planeje uma nova rota.'
+        elif tipo == 'selecionar':
+            estado.comando_selecionado = argumentos[0]
+            estado.inserir_em = None
+        elif tipo == 'inserir':
+            if estado.comando_selecionado is not None:
+                estado.inserir_em = estado.comando_selecionado
+                estado.comando_selecionado = None
+                estado.mensagem = 'Escolha um comando para inserir antes do selecionado.'
+        elif tipo == 'mover_selecionado':
+            self.mover_selecionado(argumentos[0])
+        elif tipo == 'restaurar_programa':
+            estado.restaurar_programa()
         elif tipo == 'executar':
             if not self.validar_programa():
                 return
             estado.reiniciar_desafio(preservar_comandos=True)
             estado.executando = True
             estado.mensagem = 'Executando sua sequência…'
+
+    def mover_selecionado(self, deslocamento):
+        estado = self.estado
+        caminho = estado.comando_selecionado
+        if caminho is None:
+            return
+        indice = caminho[0]
+        interno = caminho[1]
+        if not 0 <= indice < len(estado.comandos):
+            return
+        lista = estado.comandos if interno is None else estado.comandos[indice].corpo
+        posicao = indice if interno is None else interno
+        destino = posicao + deslocamento
+        if not 0 <= destino < len(lista):
+            return
+        lista[posicao], lista[destino] = lista[destino], lista[posicao]
+        estado.comando_selecionado = ((destino, None) if interno is None
+                                      else (indice, destino))
 
     def validar_programa(self):
         estado = self.estado
@@ -94,6 +155,8 @@ class ControladorJogo:
         if not estado.executando:
             return
         estado.tempo_acumulado += tempo_decorrido
+        # Um quadro pode acumular mais de uma ação; o laço preserva a cadência
+        # sem descartar o tempo restante.
         while estado.executando and estado.tempo_acumulado >= c.INTERVALO_COMANDOS:
             estado.tempo_acumulado -= c.INTERVALO_COMANDOS
             self.executar_comando()
@@ -105,6 +168,8 @@ class ControladorJogo:
         estado.trajeto_missil = None
         estado.impacto_missil = None
         estado.mensagem = 'Executando sua sequência…'
+        # O índice externo aponta para um bloco; o interno percorre o corpo de
+        # um laço sem transformar suas repetições em novos blocos editáveis.
         bloco = estado.comandos[estado.indice_comando]
         em_laco = bloco.tipo == 'repetir'
         if em_laco and not estado.permite_repeticao:

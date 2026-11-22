@@ -121,10 +121,14 @@ class AreaProgramacao:
             return True, ('quantidade', alvo['caminho'][0])
         if alvo['tipo'] in ('comando', 'laco'):
             agora = pygame.time.get_ticks()
+            # O primeiro clique seleciona; um segundo clique no mesmo bloco
+            # dentro da janela curta remove-o.
             if (anterior is not None and anterior[0] is alvo['comando']
                     and 0 <= agora - anterior[1] <= INTERVALO_DUPLO_CLIQUE):
                 return True, ('remover', *alvo['caminho'])
             self.ultimo_clique = (alvo['comando'], agora)
+            if alvo['tipo'] == 'comando':
+                return True, ('selecionar', alvo['caminho'])
         if alvo['tipo'] in ('laco', 'corpo'):
             return True, ('destino', alvo['caminho'][0])
         if alvo['tipo'] == 'fundo':
@@ -138,6 +142,7 @@ class AreaProgramacao:
             self.desafio = estado.desafio_selecionado
             self.rolagem = 0
             self.ultimo_ativo = None
+        # As alturas atuais determinam tanto o desenho quanto o limite da rolagem.
         blocos = []
         y = 8
         for indice, comando in enumerate(estado.comandos):
@@ -158,6 +163,7 @@ class AreaProgramacao:
         alvo = self.calcular_blocos(estado)[caminho[0]][2]
         if caminho[1] is not None:
             alvo = self.retangulo_interno(alvo, caminho[1])
+        # Mantém o bloco selecionado ou em execução visível após a atualização.
         if alvo.y < self.rolagem:
             self.rolagem = alvo.y
         elif alvo.bottom > self.rolagem+self.regiao.height:
@@ -166,7 +172,9 @@ class AreaProgramacao:
         self.rolagem = max(0, min(self.rolagem, limite))
 
     def comando(self, superficie, r, comando, caminho, estado):
-        ativo = estado.comando_em_execucao == caminho
+        ativo = (estado.comando_em_execucao == caminho
+                 or estado.comando_selecionado == caminho
+                 or estado.inserir_em == caminho)
         desenhar_bloco(superficie, r, comando.tipo, ROTULOS[comando.tipo], ativo=ativo)
         self.registrar_alvo(r, 'comando', caminho, comando)
 

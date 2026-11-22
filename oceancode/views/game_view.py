@@ -132,8 +132,19 @@ class ViewJogo(ViewBase):
                             compacto=True, bloqueado=bloqueado)
             self.botoes.append(AreaClique(retangulo, '', ('comando',tipo), habilitado))
         self.programacao.desenhar(superficie, estado, posicao_mouse)
+        editavel = not estado.executando and not estado.tipo_resultado
+        selecionado = estado.comando_selecionado is not None
+        self.botoes += [
+            Botao((958, 124, 36, 32), '↑', ('mover_selecionado', -1),
+                  editavel and selecionado),
+            Botao((998, 124, 36, 32), '↓', ('mover_selecionado', 1),
+                  editavel and selecionado),
+            Botao((1038, 124, 52, 32), '+', ('inserir',), editavel and selecionado),
+        ]
         self.botoes += [Botao(c.RETANGULO_EXECUTAR,'Executar',('executar',),editavel),
-                        Botao(c.RETANGULO_LIMPAR,'Limpar',('limpar',),editavel)]
+                        Botao(c.RETANGULO_LIMPAR,
+                              'Restaurar programa' if desafio.tipo.name == 'DEPURACAO' else 'Limpar',
+                              ('limpar',), editavel)]
         mensagem = estado.mensagem_resultado if estado.tipo_resultado else estado.mensagem
         texto(superficie,mensagem,(48,662),18,largura_maxima=1184)
         self.finalizar(superficie,estado,posicao_mouse)

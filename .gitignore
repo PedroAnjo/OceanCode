@@ -15,3 +15,8 @@ __pycache__/
 build/
 dist/
 *.spec
+oceancode/assets/images/icone.ico
+
+/smoke_check.py
+/repetition_check.py
+/debugging_check.py
